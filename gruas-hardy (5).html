@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Grúas Hardy</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f111a;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;flex-direction:column;height:100dvh;overflow:hidden}
+.screen.active{display:flex}
+
+/* LOGIN */
+.login-bg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;background:#0f111a}
+.login-logo{background:#e8a020;border-radius:20px;width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px}
+.login-title{font-size:26px;font-weight:700;margin-bottom:6px;text-align:center}
+.login-sub{font-size:13px;color:#666;text-align:center;margin-bottom:36px;line-height:1.5}
+.btn-google{width:100%;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:14px 20px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;margin-bottom:10px}
+.login-terms{font-size:11px;color:#444;text-align:center;line-height:1.6;margin-top:8px}
+.login-terms a{color:#e8a020;text-decoration:none}
+.btn-admin-link{background:none;border:none;color:#444;font-size:11px;margin-top:20px;cursor:pointer;text-decoration:underline}
+
+/* REGISTRO */
+.reg-header{background:#0a0c14;padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.08)}
+.reg-header h2{font-size:15px;font-weight:600}
+.reg-header p{font-size:11px;color:#888}
+.reg-body{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:14px}
+.reg-avatar{width:64px;height:64px;border-radius:50%;background:#1e2030;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 4px;border:2px solid #2a2d3e}
+.reg-name-auto{text-align:center;font-size:14px;font-weight:600}
+.reg-email-auto{text-align:center;font-size:12px;color:#888;margin-top:2px}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg label{font-size:11px;color:#888;font-weight:500}
+.fg input{background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;padding:11px 14px;font-size:13px;color:#fff;outline:none;width:100%}
+.fg input:focus{border-color:#e8a020}
+.fg input::placeholder{color:#444}
+.fhint{font-size:10px;color:#555;margin-top:2px}
+.btn-completar{background:#e8a020;border:none;border-radius:12px;color:#000;font-size:14px;font-weight:700;padding:14px;width:100%;cursor:pointer;margin-top:4px}
+
+/* APP HEADER */
+.app-header{background:#0a0c14;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0}
+.app-logo{background:#e8a020;border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.app-header-text h1{font-size:13px;font-weight:600}
+.app-header-text p{font-size:10px;color:#888}
+.app-online{margin-left:auto;background:rgba(34,197,94,0.15);border:0.5px solid rgba(34,197,94,0.4);border-radius:20px;padding:3px 8px;font-size:10px;color:#4ade80;display:flex;align-items:center;gap:4px}
+.pulse{width:5px;height:5px;background:#4ade80;border-radius:50%;animation:pulse 1.4s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+.user-chip{background:#161824;border-radius:20px;padding:3px 8px 3px 4px;display:flex;align-items:center;gap:5px;font-size:10px;color:#aaa;cursor:pointer}
+.user-initial{width:20px;height:20px;border-radius:50%;background:#e8a020;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000}
+
+/* SEARCH */
+.search-bar{background:#0a0c14;padding:8px 14px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;position:relative;z-index:20}
+.search-wrap{display:flex;align-items:center;gap:8px;background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;padding:8px 12px}
+.search-wrap input{flex:1;background:transparent;border:none;outline:none;font-size:12px;color:#fff}
+.search-wrap input::placeholder{color:#444}
+.search-results{position:absolute;top:100%;left:14px;right:14px;background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;z-index:100;display:none;max-height:160px;overflow-y:auto}
+.sri{padding:10px 14px;font-size:12px;color:#ccc;border-bottom:0.5px solid #2a2d3e;cursor:pointer}
+.sri:last-child{border-bottom:none}
+
+/* MAP */
+#map{flex:1;min-height:0;z-index:1;position:relative}
+.map-hint{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(10,12,20,0.9);border:0.5px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 14px;font-size:11px;color:#aaa;pointer-events:none;z-index:999;white-space:nowrap;transition:opacity .4s}
+.map-hint.hide{opacity:0}
+.locate-btn{position:absolute;bottom:12px;right:12px;z-index:999;background:#0a0c14;border:0.5px solid #2a2d3e;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+
+/* PANEL */
+.panel{background:#0a0c14;border-top:0.5px solid rgba(255,255,255,0.08);padding:10px 14px;flex-shrink:0;overflow-y:auto;max-height:55vh}
+.steps{display:flex;align-items:center;gap:4px;margin-bottom:8px}
+.step{flex:1;text-align:center}
+.step-dot{width:20px;height:20px;border-radius:50%;border:1.5px solid #333;color:#555;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;margin:0 auto 2px}
+.step-dot.active{background:#e8a020;border-color:#e8a020;color:#000}
+.step-dot.done{background:#22c55e;border-color:#22c55e;color:#fff}
+.step label{font-size:9px;color:#555}
+.step-line{flex:0 0 14px;height:1px;background:#222}
+.fields{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
+.field-row{background:#161824;border:0.5px solid #2a2d3e;border-radius:9px;padding:7px 11px;display:flex;align-items:center;gap:9px}
+.fdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fdot.green{background:#22c55e}
+.fdot.empty{border:1.5px dashed #444;background:transparent}
+.ftext{flex:1;font-size:11px;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftext.ph{color:#444}
+.zona-badge{font-size:9px;padding:2px 7px;border-radius:10px;flex-shrink:0;display:none}
+.z-temuco{background:rgba(34,197,94,0.15);color:#4ade80}
+.z-araucania{background:rgba(232,160,32,0.15);color:#e8a020}
+.z-interregional{background:rgba(167,139,250,0.15);color:#a78bfa}
+.z-confirmar{background:rgba(248,113,113,0.15);color:#f87171}
+
+/* COMUNA SELECTOR */
+.comuna-wrap{display:flex;gap:6px;margin-bottom:7px;align-items:center}
+.comuna-label{font-size:10px;color:#888;flex-shrink:0}
+.comuna-select{flex:1;background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:6px 10px;font-size:11px;color:#fff;outline:none}
+.comuna-select:focus{border-color:#e8a020}
+
+/* VEHÍCULOS */
+.selector-label{font-size:10px;color:#888;margin-bottom:4px;font-weight:500}
+.v-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:7px}
+.v-card{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:5px 2px;text-align:center;cursor:pointer;font-size:9px;color:#666}
+.v-card.sel{border-color:#e8a020;background:#1e1a0a;color:#b87c10}
+.v-card .vi{font-size:15px;margin-bottom:1px}
+.v-card .vp{font-size:9px;font-weight:700;margin-top:1px;color:#555}
+.v-card.sel .vp{color:#e8a020}
+
+/* MOTIVOS */
+.motivo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:5px}
+.m-card{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:5px 2px;text-align:center;cursor:pointer;font-size:9px;color:#666}
+.m-card.sel{border-color:#3b82f6;background:#0f1a2e;color:#60a5fa}
+.m-card .mi{font-size:13px;margin-bottom:1px}
+.motivo-otro-input{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:6px 10px;font-size:11px;color:#fff;outline:none;width:100%;margin-bottom:6px;display:none}
+.motivo-otro-input::placeholder{color:#444}
+.motivo-skip{font-size:10px;color:#555;cursor:pointer;text-align:right;margin-bottom:4px}
+
+/* PRECIO */
+.precio-box{background:#161824;border:0.5px solid #2a2d3e;border-radius:9px;padding:8px 12px;margin-bottom:7px;display:none}
+.precio-rango{font-size:15px;font-weight:700;color:#e8a020}
+.precio-aviso{font-size:10px;color:#888;margin-top:2px}
+.precio-detalle{font-size:10px;color:#555;margin-top:2px}
+
+/* STATUS CLIENTE */
+.status-bar{background:#0a0c14;border-top:0.5px solid rgba(255,255,255,0.08);padding:10px 14px;display:none;flex-shrink:0}
+.status-bar.show{display:block}
+.status-card-inner{background:#161824;border-radius:12px;padding:12px 14px}
+.sc-estado{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.sc-info-row{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.sc-info-chip{background:#0f111a;border-radius:8px;padding:5px 8px;font-size:10px;color:#888;flex:1;min-width:80px}
+.sc-info-chip strong{display:block;color:#fff;font-size:11px;margin-bottom:1px}
+.sc-steps{display:flex;gap:3px;margin-top:8px}
+.sc-step{flex:1;background:#0f111a;border-radius:6px;padding:5px 2px;text-align:center;font-size:9px;color:#555}
+.sc-step.done{background:#052e16;color:#4ade80}
+.sc-step.active{background:#1c1404;color:#e8a020}
+
+.btn-sol{width:100%;background:#e8a020;border:none;border-radius:11px;color:#000;font-size:13px;font-weight:700;padding:11px;cursor:pointer;margin-top:4px}
+.btn-sol:disabled{opacity:.4;cursor:default}
+.btn-ok{background:#22c55e;color:#fff}
+.btn-cancelado{background:#f87171;color:#fff}
+
+/* ADMIN */
+.admin-header{background:#0a0c14;padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0}
+.admin-header h2{font-size:14px;font-weight:600;flex:1}
+.back-btn{background:#161824;border:none;border-radius:8px;color:#aaa;padding:6px 10px;font-size:11px;cursor:pointer}
+.admin-tabs{display:flex;background:#0a0c14;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0;overflow-x:auto}
+.admin-tab{padding:10px 12px;font-size:11px;color:#666;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;flex-shrink:0}
+.admin-tab.active{color:#e8a020;border-bottom-color:#e8a020}
+.admin-body{flex:1;overflow-y:auto;padding:12px}
+.admin-panel{display:none}
+.admin-panel.active{display:block}
+.asec{background:#161824;border:0.5px solid #2a2d3e;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.asec-title{padding:10px 14px;font-size:11px;font-weight:600;color:#e8a020;border-bottom:0.5px solid #2a2d3e;display:flex;align-items:center;justify-content:space-between}
+.add-btn-sm{background:#1e2030;border:0.5px solid #2a2d3e;border-radius:6px;color:#888;font-size:10px;padding:3px 8px;cursor:pointer}
+.afield{padding:8px 14px;border-bottom:0.5px solid #1a1d2a;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.afield:last-child{border-bottom:none}
+.afield label{font-size:11px;color:#888;flex:1;min-width:100px}
+.ain{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:7px;padding:5px 8px;font-size:11px;color:#fff;outline:none;text-align:right}
+.ain:focus{border-color:#e8a020}
+.ain.wide{text-align:left;width:140px}
+.ain.full{text-align:left;flex:1}
+.atoggle{width:32px;height:18px;background:#2a2d3e;border-radius:9px;position:relative;cursor:pointer;flex-shrink:0}
+.atoggle.on{background:#22c55e}
+.atd{position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .15s}
+.atoggle.on .atd{left:17px}
+.del-btn{background:none;border:none;color:#444;font-size:14px;cursor:pointer;padding:0 2px;flex-shrink:0}
+.del-btn:hover{color:#f87171}
+
+/* TABLA TARIFAS */
+.tarifa-scroll{overflow-x:auto;padding:8px}
+.tarifa-table{border-collapse:collapse;font-size:10px;min-width:500px}
+.tarifa-table th{padding:5px 6px;text-align:center;color:#888;border-bottom:0.5px solid #2a2d3e;font-weight:500;white-space:nowrap}
+.tarifa-table th:first-child{text-align:left;padding-left:8px}
+.tarifa-table td{padding:4px 3px;border-bottom:0.5px solid #1a1d2a;text-align:center}
+.tarifa-table tr:last-child td{border-bottom:none}
+.tarifa-table td:first-child{text-align:left;color:#ccc;padding-left:8px;white-space:nowrap}
+.tin{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:5px;padding:3px 4px;font-size:10px;color:#fff;outline:none;width:68px;text-align:right}
+.tin:focus{border-color:#e8a020}
+.modo-sel{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:5px;padding:3px 4px;font-size:9px;color:#fff;outline:none}
+
+.btn-save{background:#e8a020;border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;padding:12px;width:100%;cursor:pointer;margin-top:6px}
+
+/* MODAL */
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-ov.show{display:flex}
+.modal-box{background:#161824;border:0.5px solid #2a2d3e;border-radius:16px;padding:24px;width:280px;text-align:center}
+.modal-box h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.modal-box p{font-size:12px;color:#888;margin-bottom:16px}
+.modal-inp{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:10px;padding:12px;font-size:18px;color:#fff;outline:none;width:100%;text-align:center;letter-spacing:6px;margin-bottom:12px}
+.modal-inp:focus{border-color:#e8a020}
+.modal-btn{background:#e8a020;border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;padding:11px;width:100%;cursor:pointer;margin-bottom:8px}
+.modal-cancel{background:none;border:none;color:#555;font-size:12px;cursor:pointer}
+.modal-err{color:#f87171;font-size:11px;margin-top:-8px;margin-bottom:8px;display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="screen active" id="screenLogin">
+  <div class="login-bg">
+    <div class="login-logo">🚛</div>
+    <div class="login-title">Grúas Hardy</div>
+    <div class="login-sub">Solicita una grúa en minutos.<br>Servicio 24/7 en Temuco y región.</div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continuar con Google
+    </button>
+    <div class="login-terms">Al continuar aceptas nuestros <a href="#">Términos de uso</a> y <a href="#">Política de privacidad</a></div>
+    <button class="btn-admin-link" onclick="mostrarModalAdmin()">⚙️ Acceso administrador</button>
+  </div>
+</div>
+
+<!-- REGISTRO -->
+<div class="screen" id="screenRegistro">
+  <div class="reg-header"><h2>Completa tu perfil</h2><p>Solo la primera vez</p></div>
+  <div class="reg-body">
+    <div style="text-align:center;padding:8px 0">
+      <div class="reg-avatar" id="regAvatar">👤</div>
+      <div class="reg-name-auto" id="regNombre">—</div>
+      <div class="reg-email-auto" id="regEmail">—</div>
+    </div>
+    <div class="fg"><label>Teléfono</label><input type="tel" id="inputTel" placeholder="+56 9 1234 5678"/><div class="fhint">Te llamaremos para confirmar</div></div>
+    <div class="fg"><label>RUT</label><input type="text" id="inputRut" placeholder="12.345.678-9"/><div class="fhint">Para boleta o factura</div></div>
+    <button class="btn-completar" onclick="completarRegistro()">Listo, ir al mapa →</button>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div class="screen" id="screenApp">
+  <div class="app-header">
+    <div class="app-logo">🚛</div>
+    <div class="app-header-text"><h1>Grúas Hardy</h1><p>Servicio 24/7 · Temuco</p></div>
+    <div class="app-online"><div class="pulse"></div> En línea</div>
+    <div class="user-chip" onclick="verPerfil()">
+      <div class="user-initial" id="chipInicial">?</div>
+      <span id="chipNombre">Usuario</span>
+    </div>
+  </div>
+  <div class="search-bar">
+    <div class="search-wrap">
+      <span style="font-size:14px;color:#555">🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar dirección o coordenadas..." oninput="buscar(this.value)" autocomplete="off"/>
+      <span id="searchClear" style="font-size:14px;color:#555;cursor:pointer;display:none" onclick="limpiarBusqueda()">✕</span>
+    </div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+  <div id="map" style="position:relative">
+    <div class="map-hint" id="hint">📍 Toca el mapa o busca una dirección</div>
+    <div class="locate-btn" onclick="centrarGPS()">📍</div>
+  </div>
+
+  <!-- STATUS EN TIEMPO REAL -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-card-inner">
+      <div class="sc-estado" id="scEstado">⏳ Esperando confirmación</div>
+      <div class="sc-info-row" id="scInfoRow" style="display:none">
+        <div class="sc-info-chip"><strong id="scConductor">—</strong>Conductor</div>
+        <div class="sc-info-chip"><strong id="scPatente">—</strong>Patente grúa</div>
+        <div class="sc-info-chip"><strong id="scHora">—</strong>Llega a las</div>
+        <div class="sc-info-chip"><strong id="scPrecioFinal">—</strong>Precio final</div>
+      </div>
+      <div id="scObservaciones" style="font-size:10px;color:#888;margin-top:4px;display:none"></div>
+      <div class="sc-steps" id="scSteps">
+        <div class="sc-step active" id="scs0">⏳ Solicitud</div>
+        <div class="sc-step" id="scs1">📞 Contacto</div>
+        <div class="sc-step" id="scs2">🚛 En camino</div>
+        <div class="sc-step" id="scs3">✅ Completado</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="mainPanel">
+    <div class="steps">
+      <div class="step"><div class="step-dot done">✓</div><label>Origen</label></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-dot active" id="sd2">2</div><label>Destino</label></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-dot" id="sd3">3</div><label>Confirmar</label></div>
+    </div>
+
+    <div class="fields">
+      <div class="field-row">
+        <div class="fdot green"></div>
+        <div class="ftext" id="txtOrigen">Detectando ubicación...</div>
+      </div>
+      <div class="field-row">
+        <div class="fdot empty" id="dotDest"></div>
+        <div class="ftext ph" id="txtDest">Toca el mapa o busca destino</div>
+        <span class="zona-badge" id="zonaBadge"></span>
+      </div>
+    </div>
+
+    <div class="comuna-wrap">
+      <span class="comuna-label">Comuna destino:</span>
+      <select class="comuna-select" id="comunaSelect" onchange="onComunaChange()">
+        <option value="">— Selecciona o detecta automático —</option>
+      </select>
+    </div>
+
+    <div class="selector-label">¿Qué necesitas remolcar?</div>
+    <div class="v-grid" id="vehiclesContainer"></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="selector-label" style="margin-bottom:0">¿Qué pasó? <span style="color:#555;font-size:9px">(opcional)</span></div>
+      <div class="motivo-skip" onclick="saltarMotivo()">Omitir →</div>
+    </div>
+    <div class="motivo-grid" id="motivoContainer"></div>
+    <input type="text" class="motivo-otro-input" id="motivoOtroInput" placeholder="Describe el motivo..."/>
+
+    <div class="precio-box" id="precioBox">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="precio-rango" id="precioRango">—</div>
+          <div class="precio-aviso" id="precioAviso">⚠️ Valor estimado — se confirma al llamar</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:9px;color:#888" id="zonaLabel">—</div>
+          <div style="font-size:9px;color:#f87171" id="noctLabel"></div>
+        </div>
+      </div>
+      <div class="precio-detalle" id="precioDetalle"></div>
+    </div>
+
+    <button class="btn-sol" id="btn" disabled onclick="solicitar()">🚛 Marca el destino primero</button>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="screen" id="screenAdmin">
+  <div class="admin-header">
+    <h2>⚙️ Panel administrador</h2>
+    <button class="back-btn" onclick="mostrarPantalla('screenApp')">← Volver</button>
+  </div>
+  <div class="admin-tabs">
+    <div class="admin-tab active" onclick="cambiarTab(0)">🚛 Vehículos</div>
+    <div class="admin-tab" onclick="cambiarTab(1)">💰 Tarifas</div>
+    <div class="admin-tab" onclick="cambiarTab(2)">🗺️ Comunas</div>
+    <div class="admin-tab" onclick="cambiarTab(3)">🌎 Inter-reg.</div>
+    <div class="admin-tab" onclick="cambiarTab(4)">❓ Motivos</div>
+    <div class="admin-tab" onclick="cambiarTab(5)">⚙️ General</div>
+  </div>
+  <div class="admin-body">
+
+    <!-- TAB 0: VEHÍCULOS -->
+    <div class="admin-panel active" id="tab0">
+      <div class="asec">
+        <div class="asec-title">Tipos de vehículo <button class="add-btn-sm" onclick="agregarVehiculo()">+ Agregar</button></div>
+        <div id="adminVehiclesList"></div>
+      </div>
+    </div>
+
+    <!-- TAB 1: TARIFAS -->
+    <div class="admin-panel" id="tab1">
+      <div class="asec">
+        <div class="asec-title">Precio por tipo de vehículo × comuna</div>
+        <p style="font-size:10px;color:#555;padding:8px 14px">Modo: Fijo = precio único | $/km = distancia × tarifa | Fijo+km = base + km | Confirmar = el operador define</p>
+        <div class="tarifa-scroll" id="tarifaTableWrap"></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Recargos generales</div>
+        <div class="afield"><label>Recargo nocturno (22:00–07:00)</label><input type="number" id="rNocturno" class="ain" style="width:60px" value="30"/><span style="font-size:10px;color:#555">%</span></div>
+        <div class="afield"><label>Margen estimado superior</label><input type="number" id="rMargen" class="ain" style="width:60px" value="15"/><span style="font-size:10px;color:#555">%</span></div>
+      </div>
+    </div>
+
+    <!-- TAB 2: COMUNAS -->
+    <div class="admin-panel" id="tab2">
+      <div class="asec">
+        <div class="asec-title">Comunas y zonas <button class="add-btn-sm" onclick="agregarComuna()">+ Agregar</button></div>
+        <div id="comunasList"></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Radios de zona (km desde Temuco)</div>
+        <div class="afield"><label>Radio urbano Temuco</label><input type="number" id="radioTemuco" class="ain" style="width:70px" value="15"/><span style="font-size:10px;color:#555">km</span></div>
+        <div class="afield"><label>Radio Araucanía</label><input type="number" id="radioAraucania" class="ain" style="width:70px" value="150"/><span style="font-size:10px;color:#555">km</span></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: INTER-REGIONAL -->
+    <div class="admin-panel" id="tab3">
+      <div class="asec">
+        <div class="asec-title">Rutas inter-regionales <button class="add-btn-sm" onclick="agregarIR()">+ Agregar</button></div>
+        <div id="irList"></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Tarifas inter-regionales × vehículo</div>
+        <p style="font-size:10px;color:#555;padding:8px 14px">Precio por km según tipo de vehículo para rutas inter-regionales</p>
+        <div class="tarifa-scroll" id="irTarifaWrap"></div>
+      </div>
+    </div>
+
+    <!-- TAB 4: MOTIVOS -->
+    <div class="admin-panel" id="tab4">
+      <div class="asec">
+        <div class="asec-title">Motivos de solicitud <button class="add-btn-sm" onclick="agregarMotivo()">+ Agregar</button></div>
+        <div id="motivosList"></div>
+      </div>
+    </div>
+
+    <!-- TAB 5: GENERAL -->
+    <div class="admin-panel" id="tab5">
+      <div class="asec">
+        <div class="asec-title">Google Sheets</div>
+        <div class="afield"><label>Sheet ID</label><input type="text" id="adminSheetId" class="ain full" placeholder="1-AfO2lCQxOE..."/></div>
+        <div style="padding:6px 14px 10px;font-size:10px;color:#555">El operador actualiza Estado, Conductor, Patente, Hora y Precio en el Sheet y la app del cliente se actualiza automáticamente.</div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Disponibilidad</div>
+        <div class="afield"><label>Lunes a viernes</label><div class="atoggle on" id="togLV" onclick="tg(this)"><div class="atd"></div></div></div>
+        <div class="afield"><label>Sábado</label><div class="atoggle on" id="togSab" onclick="tg(this)"><div class="atd"></div></div></div>
+        <div class="afield"><label>Domingo</label><div class="atoggle" id="togDom" onclick="tg(this)"><div class="atd"></div></div></div>
+        <div class="afield"><label>Festivos</label><div class="atoggle on" id="togFest" onclick="tg(this)"><div class="atd"></div></div></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Seguridad</div>
+        <div class="afield"><label>Clave actual</label><input type="password" id="claveActual" class="ain" placeholder="••••"/></div>
+        <div class="afield"><label>Nueva clave</label><input type="password" id="claveNueva" class="ain" placeholder="••••"/></div>
+      </div>
+    </div>
+
+    <button class="btn-save" onclick="guardarAdmin()">💾 Guardar todos los cambios</button>
+    <div style="height:24px"></div>
+  </div>
+</div>
+
+<!-- MODAL CLAVE -->
+<div class="modal-ov" id="modalAdmin">
+  <div class="modal-box">
+    <h3>🔐 Administrador</h3>
+    <p>Ingresa tu clave para continuar</p>
+    <input type="password" class="modal-inp" id="modalClave" placeholder="••••" maxlength="20" onkeydown="if(event.key==='Enter')verificarClave()"/>
+    <div class="modal-err" id="modalErr">Clave incorrecta</div>
+    <button class="modal-btn" onclick="verificarClave()">Entrar</button>
+    <button class="modal-cancel" onclick="document.getElementById('modalAdmin').classList.remove('show')">Cancelar</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SHEET_ID = '1-AfO2lCQxOEHJqGXf56CtO-jFms7WAXxa7lniy70m9s';
+const TEMUCO_LL = [-38.7359, -72.5904];
+let solicitudRow = null;
+let pollingInterval = null;
+
+const CFG_DEFAULT = {
+  claveAdmin:'1234', sheetId:SHEET_ID,
+  radioTemuco:15, radioAraucania:150,
+  rNocturno:30, rMargen:15,
+  disponibilidad:{lv:true,sab:true,dom:false,fest:true},
+  vehiculos:[
+    {icon:'🚗',nombre:'Auto / Moto',activo:true},
+    {icon:'🚙',nombre:'Camioneta',activo:true},
+    {icon:'🚐',nombre:'Furgón / Van',activo:true},
+    {icon:'🚌',nombre:'Bus / Minibus',activo:true},
+    {icon:'🚚',nombre:'Camión',activo:true},
+    {icon:'🚜',nombre:'Tractor / Maq.',activo:true},
+    {icon:'📦',nombre:'Contenedor',activo:true},
+    {icon:'❓',nombre:'No sé / Otro',activo:true}
+  ],
+  // comunas: {nombre, modo:'fijo'|'km'|'fijo+km'|'confirmar', precios:[por vehiculo idx]}
+  comunas:[
+    {nombre:'Temuco (urbano)',modo:'fijo',precios:[25000,32000,40000,55000,65000,80000,95000,28000]},
+    {nombre:'Vilcún',modo:'fijo',precios:[45000,55000,65000,85000,100000,130000,160000,50000]},
+    {nombre:'Lautaro',modo:'fijo',precios:[50000,60000,70000,90000,110000,140000,170000,55000]},
+    {nombre:'Cunco',modo:'fijo',precios:[55000,65000,78000,100000,120000,150000,185000,60000]},
+    {nombre:'Freire',modo:'fijo',precios:[48000,58000,68000,88000,105000,135000,165000,52000]},
+    {nombre:'Pitrufquén',modo:'fijo',precios:[52000,62000,74000,95000,115000,145000,175000,57000]},
+    {nombre:'Gorbea',modo:'fijo',precios:[55000,66000,78000,100000,120000,152000,185000,60000]},
+    {nombre:'Pucón',modo:'fijo',precios:[85000,100000,120000,160000,190000,240000,290000,90000]},
+    {nombre:'Villarrica',modo:'fijo',precios:[75000,90000,108000,142000,170000,215000,260000,80000]},
+    {nombre:'Angol',modo:'km',precios:[1400,1700,2000,2700,3200,4200,5200,1600]},
+    {nombre:'Victoria',modo:'km',precios:[1300,1600,1900,2500,3000,3900,4800,1500]},
+    {nombre:'Curacautín',modo:'fijo+km',precios:[60000,72000,86000,112000,134000,168000,205000,65000]},
+    {nombre:'Lonquimay',modo:'confirmar',precios:[0,0,0,0,0,0,0,0]},
+    {nombre:'Carahue',modo:'fijo',precios:[58000,70000,83000,108000,129000,163000,198000,63000]},
+    {nombre:'Nueva Imperial',modo:'fijo',precios:[50000,60000,71000,93000,111000,140000,170000,55000]},
+    {nombre:'Otra comuna',modo:'confirmar',precios:[0,0,0,0,0,0,0,0]}
+  ],
+  // kmExtra para modo fijo+km
+  comunasKmExtra:[0,0,0,0,0,0,0,0,0,1200,1000,800,0,0,0,0],
+  interRegionales:[
+    {nombre:'Los Ríos / Valdivia',precios:[2500,3000,3500,4500,5000,6000,7500,2800]},
+    {nombre:'Biobío / Concepción',precios:[2200,2800,3200,4200,4800,5800,7200,2500]},
+    {nombre:'Los Lagos / Osorno',precios:[2800,3400,4000,5200,6000,7200,9000,3200]},
+    {nombre:'Metropolitana / Santiago',precios:[3500,4200,5000,6500,7500,9000,11000,4000]}
+  ],
+  irModo:'km',
+  motivos:[
+    {icon:'🔋',label:'Batería'},
+    {icon:'🔧',label:'Falla mecánica'},
+    {icon:'💥',label:'Accidente'},
+    {icon:'⛽',label:'Sin combustible'},
+    {icon:'🔑',label:'Llaves perdidas'},
+    {icon:'📍',label:'Atascado'},
+    {icon:'🔥',label:'Sobrecalentamiento'},
+    {icon:'💨',label:'Neumático'},
+    {icon:'🌊',label:'Inundación'},
+    {icon:'❄️',label:'Nieve / hielo'},
+    {icon:'🚧',label:'Choque / colisión'},
+    {icon:'🔩',label:'Falla eléctrica'},
+    {icon:'✏️',label:'Otro motivo'}
+  ]
+};
+
+let config=null, usuario=null;
+let map, markerOrigen, markerDestino, markerTruck, routeLine;
+let origenLL=null, destinoLL=null;
+let selectedVehicle=0, selectedMotivo=null;
+let comunaSeleccionada=null, zonaActual=null;
+let pedido=false, searchTimeout=null;
+
+function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+// ── LOGIN ──
+function loginGoogle(){
+  const nombre=prompt('(Demo) Tu nombre completo:','');if(!nombre)return;
+  const email=prompt('(Demo) Tu correo:','');if(!email)return;
+  const g=lsGet('gh_usr');
+  if(g&&g.email===email&&g.registrado){usuario=g;entrarApp();return;}
+  usuario={nombre,email,telefono:'',rut:'',registrado:false};
+  document.getElementById('regNombre').textContent=nombre;
+  document.getElementById('regEmail').textContent=email;
+  document.getElementById('regAvatar').textContent=nombre.charAt(0).toUpperCase();
+  mostrarPantalla('screenRegistro');
+}
+
+function completarRegistro(){
+  const tel=document.getElementById('inputTel').value.trim();
+  const rut=document.getElementById('inputRut').value.trim();
+  if(!tel||!rut){alert('Completa teléfono y RUT');return;}
+  usuario.telefono=tel;usuario.rut=rut;usuario.registrado=true;
+  lsSet('gh_usr',usuario);
+  registrarCliente(usuario);
+  entrarApp();
+}
+
+function entrarApp(){
+  document.getElementById('chipNombre').textContent=usuario.nombre.split(' ')[0];
+  document.getElementById('chipInicial').textContent=usuario.nombre.charAt(0).toUpperCase();
+  renderVehiculos();renderMotivos();llenarComunaSelect();
+  mostrarPantalla('screenApp');iniciarMapa();
+}
+
+function verPerfil(){
+  if(confirm(`👤 ${usuario.nombre}\n📧 ${usuario.email}\n📱 ${usuario.telefono}\n🪪 ${usuario.rut}\n\n¿Cerrar sesión?`)){localStorage.removeItem('gh_usr');location.reload();}
+}
+
+// ── PANTALLAS ──
+function mostrarPantalla(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='screenApp'&&map)setTimeout(()=>map.invalidateSize(),100);
+  if(id==='screenAdmin')renderAdmin();
+}
+
+// ── MODAL ADMIN ──
+function mostrarModalAdmin(){
+  document.getElementById('modalClave').value='';
+  document.getElementById('modalErr').style.display='none';
+  document.getElementById('modalAdmin').classList.add('show');
+  setTimeout(()=>document.getElementById('modalClave').focus(),100);
+}
+function verificarClave(){
+  if(document.getElementById('modalClave').value===config.claveAdmin){
+    document.getElementById('modalAdmin').classList.remove('show');
+    mostrarPantalla('screenAdmin');
+  }else{document.getElementById('modalErr').style.display='block';document.getElementById('modalClave').value='';}
+}
+function tg(el){el.classList.toggle('on');el.querySelector('.atd').style.left=el.classList.contains('on')?'17px':'3px';}
+
+// ── MAPA ──
+function iniciarMapa(){
+  if(map)return;
+  map=L.map('map',{zoomControl:false,attributionControl:false}).setView(TEMUCO_LL,13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  const iO=L.divIcon({html:'<div style="width:16px;height:16px;background:#22c55e;border:2.5px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(34,197,94,0.25)"></div>',iconAnchor:[8,8],className:''});
+  window._iD=L.divIcon({html:'<div style="background:#e8a020;color:#000;font-weight:700;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:26px;height:26px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px"><span style="transform:rotate(45deg)">B</span></div>',iconAnchor:[13,26],className:''});
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      origenLL=[pos.coords.latitude,pos.coords.longitude];
+      map.setView(origenLL,15);
+      markerOrigen=L.marker(origenLL,{icon:iO}).addTo(map);
+      reverseGeocode(origenLL,txt=>document.getElementById('txtOrigen').textContent=txt);
+    },()=>setOrigenDefault(iO));
+  }else setOrigenDefault(iO);
+  map.on('click',e=>{if(!pedido)setDestino([e.latlng.lat,e.latlng.lng]);});
+}
+
+function setOrigenDefault(i){origenLL=TEMUCO_LL;markerOrigen=L.marker(origenLL,{icon:i}).addTo(map);document.getElementById('txtOrigen').textContent='Temuco, Araucanía';}
+
+function setDestino(ll){
+  destinoLL=ll;
+  if(markerDestino)markerDestino.remove();
+  markerDestino=L.marker(ll,{icon:window._iD}).addTo(map);
+  reverseGeocode(ll,txt=>{document.getElementById('txtDest').textContent=txt;document.getElementById('txtDest').classList.remove('ph');document.getElementById('dotDest').style.cssText='width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#e8a020';});
+  detectarZonaYComuna(ll);
+  if(routeLine)routeLine.remove();
+  routeLine=L.polyline([origenLL,ll],{color:'#e8a020',weight:4,opacity:.85,dashArray:'8,4'}).addTo(map);
+  map.fitBounds(routeLine.getBounds(),{padding:[50,50]});
+  document.getElementById('sd2').textContent='✓';document.getElementById('sd2').className='step-dot done';
+  document.getElementById('sd3').className='step-dot active';
+  document.getElementById('hint').classList.add('hide');
+  limpiarBusqueda();
+}
+
+function detectarZonaYComuna(ll){
+  const distT=calcDistKm(TEMUCO_LL,ll);
+  const badge=document.getElementById('zonaBadge');
+  badge.style.display='inline-block';
+  if(distT>config.radioAraucania){
+    zonaActual='interregional';badge.className='zona-badge z-interregional';badge.textContent='Inter-regional';
+    // No auto-seleccionar comuna para inter-regional
+  }else if(distT<=config.radioTemuco){
+    zonaActual='temuco';badge.className='zona-badge z-temuco';badge.textContent='Temuco';
+    autoSeleccionarComuna('Temuco (urbano)');
+  }else{
+    zonaActual='araucania';badge.className='zona-badge z-araucania';badge.textContent='Araucanía';
+    // Intentar detectar comuna por geocoding
+    reverseGeocodeComuna(ll);
+  }
+  calcPrecio();
+}
+
+function reverseGeocodeComuna(ll){
+  fetch(`https://nominatim.openstreetmap.org/reverse?lat=${ll[0]}&lon=${ll[1]}&format=json&zoom=10`)
+    .then(r=>r.json()).then(d=>{
+      if(d&&d.address){
+        const ciudad=d.address.city||d.address.town||d.address.village||d.address.municipality||'';
+        autoSeleccionarComuna(ciudad);
+      }
+    }).catch(()=>{});
+}
+
+function autoSeleccionarComuna(nombre){
+  const sel=document.getElementById('comunaSelect');
+  const idx=config.comunas.findIndex(c=>c.nombre.toLowerCase().includes(nombre.toLowerCase())||nombre.toLowerCase().includes(c.nombre.toLowerCase().split(' ')[0]));
+  if(idx>=0){sel.value=idx;comunaSeleccionada=idx;calcPrecio();}
+}
+
+function onComunaChange(){
+  const v=document.getElementById('comunaSelect').value;
+  comunaSeleccionada=v!==''?parseInt(v):null;
+  calcPrecio();
+}
+
+function llenarComunaSelect(){
+  const sel=document.getElementById('comunaSelect');
+  sel.innerHTML='<option value="">— Selecciona o detecta automático —</option>';
+  config.comunas.forEach((c,i)=>{
+    const o=document.createElement('option');
+    o.value=i;o.textContent=c.nombre;
+    sel.appendChild(o);
+  });
+}
+
+function calcDistKm(a,b){
+  const R=6371,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))*1.3;
+}
+
+function calcPrecio(){
+  if(!destinoLL)return;
+  const vIdx=selectedVehicle;
+  const hora=new Date().getHours();
+  const esNocturno=(hora>=22||hora<7);
+  let precioMin=0,precioMax=0,labelZona='',detalle='';
+  const km=calcDistKm(origenLL||TEMUCO_LL,destinoLL);
+
+  if(zonaActual==='interregional'){
+    // Precio inter-regional por km según vehículo
+    const ir=config.interRegionales[0];
+    const kmPrice=ir?ir.precios[vIdx]||3000:3000;
+    precioMin=Math.round((kmPrice*km)/1000)*1000;
+    labelZona='Inter-regional';
+    detalle=`${km.toFixed(1)} km × $${kmPrice.toLocaleString('es-CL')}/km`;
+  } else if(comunaSeleccionada!==null&&comunaSeleccionada!==undefined){
+    const c=config.comunas[comunaSeleccionada];
+    if(!c){calcPrecioGenerico(km,vIdx,esNocturno);return;}
+    if(c.modo==='confirmar'){
+      document.getElementById('precioBox').style.display='block';
+      document.getElementById('precioRango').textContent='Por confirmar';
+      document.getElementById('precioAviso').textContent='📞 El operador te llamará con el precio exacto';
+      document.getElementById('zonaLabel').textContent=c.nombre;
+      document.getElementById('noctLabel').textContent='';
+      document.getElementById('precioDetalle').textContent='';
+      const btn=document.getElementById('btn');btn.disabled=false;btn.textContent='🚛 Solicitar — precio por confirmar';
+      return;
+    }else if(c.modo==='fijo'){
+      precioMin=c.precios[vIdx]||0;
+      labelZona=c.nombre;detalle='Precio fijo por destino';
+    }else if(c.modo==='km'){
+      precioMin=Math.round((c.precios[vIdx]||1200)*km/1000)*1000;
+      labelZona=c.nombre;detalle=`${km.toFixed(1)} km × $${(c.precios[vIdx]||1200).toLocaleString('es-CL')}/km`;
+    }else if(c.modo==='fijo+km'){
+      const kmExtra=config.comunasKmExtra[comunaSeleccionada]||800;
+      precioMin=(c.precios[vIdx]||0)+Math.round(kmExtra*km/1000)*1000;
+      labelZona=c.nombre;detalle=`Base $${(c.precios[vIdx]||0).toLocaleString('es-CL')} + ${km.toFixed(1)} km × $${kmExtra.toLocaleString('es-CL')}/km`;
+    }
+  }else{
+    calcPrecioGenerico(km,vIdx,esNocturno);return;
+  }
+
+  if(esNocturno)precioMin=Math.round(precioMin*(1+config.rNocturno/100)/1000)*1000;
+  precioMax=Math.round(precioMin*(1+config.rMargen/100)/1000)*1000;
+
+  document.getElementById('precioBox').style.display='block';
+  document.getElementById('precioRango').textContent=`$${precioMin.toLocaleString('es-CL')} – $${precioMax.toLocaleString('es-CL')}`;
+  document.getElementById('precioAviso').textContent='⚠️ Valor estimado — se confirma al llamar';
+  document.getElementById('zonaLabel').textContent=labelZona;
+  document.getElementById('noctLabel').textContent=esNocturno?'🌙 Recargo nocturno aplicado':'';
+  document.getElementById('precioDetalle').textContent=detalle;
+  const btn=document.getElementById('btn');
+  btn.disabled=false;btn.textContent=`🚛 Solicitar grúa — desde $${precioMin.toLocaleString('es-CL')}`;
+}
+
+function calcPrecioGenerico(km,vIdx,esNocturno){
+  let precioMin=Math.round((18500+km*1200)/1000)*1000;
+  if(esNocturno)precioMin=Math.round(precioMin*(1+config.rNocturno/100)/1000)*1000;
+  const precioMax=Math.round(precioMin*(1+config.rMargen/100)/1000)*1000;
+  document.getElementById('precioBox').style.display='block';
+  document.getElementById('precioRango').textContent=`$${precioMin.toLocaleString('es-CL')} – $${precioMax.toLocaleString('es-CL')}`;
+  document.getElementById('precioAviso').textContent='⚠️ Valor estimado — se confirma al llamar';
+  document.getElementById('zonaLabel').textContent='Precio referencial';
+  document.getElementById('noctLabel').textContent=esNocturno?'🌙 Recargo nocturno':'';
+  document.getElementById('precioDetalle').textContent=`${km.toFixed(1)} km`;
+  const btn=document.getElementById('btn');btn.disabled=false;btn.textContent=`🚛 Solicitar grúa — desde $${precioMin.toLocaleString('es-CL')}`;
+}
+
+function centrarGPS(){
+  if(origenLL){map.setView(origenLL,16);return;}
+  navigator.geolocation?.getCurrentPosition(pos=>{origenLL=[pos.coords.latitude,pos.coords.longitude];map.setView(origenLL,16);});
+}
+
+// ── VEHÍCULOS Y MOTIVOS ──
+function renderVehiculos(){
+  const c=document.getElementById('vehiclesContainer');c.innerHTML='';
+  const activos=config.vehiculos.map((v,i)=>({...v,idx:i})).filter(v=>v.activo);
+  activos.forEach((v,i)=>{
+    const d=document.createElement('div');d.className='v-card'+(i===0?' sel':'');
+    const precio=config.comunas[0]?.precios[v.idx]||0;
+    d.innerHTML=`<div class="vi">${v.icon}</div><div style="font-size:9px;line-height:1.2">${v.nombre}</div><div class="vp">${precio?'$'+precio.toLocaleString('es-CL'):''}</div>`;
+    d.onclick=()=>{document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selectedVehicle=v.idx;if(destinoLL)calcPrecio();};
+    if(i===0)selectedVehicle=v.idx;
+    c.appendChild(d);
+  });
+}
+
+function renderMotivos(){
+  const c=document.getElementById('motivoContainer');c.innerHTML='';
+  config.motivos.forEach((m,i)=>{
+    const d=document.createElement('div');d.className='m-card';
+    d.innerHTML=`<div class="mi">${m.icon}</div>${m.label}`;
+    d.onclick=()=>{
+      document.querySelectorAll('.m-card').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');
+      if(m.label==='Otro motivo'){selectedMotivo='otro';document.getElementById('motivoOtroInput').style.display='block';document.getElementById('motivoOtroInput').focus();}
+      else{selectedMotivo=m.label;document.getElementById('motivoOtroInput').style.display='none';}
+    };
+    c.appendChild(d);
+  });
+}
+function saltarMotivo(){selectedMotivo=null;document.querySelectorAll('.m-card').forEach(x=>x.classList.remove('sel'));document.getElementById('motivoOtroInput').style.display='none';}
+
+// ── BÚSQUEDA ──
+function buscar(q){
+  document.getElementById('searchClear').style.display=q?'block':'none';
+  if(!q||q.length<3){document.getElementById('searchResults').style.display='none';return;}
+  clearTimeout(searchTimeout);
+  searchTimeout=setTimeout(async()=>{
+    const res=document.getElementById('searchResults');
+    const coord=q.match(/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/);
+    if(coord){const ll=[parseFloat(coord[1]),parseFloat(coord[2])];res.style.display='block';res.innerHTML=`<div class="sri" onclick="selRes(${ll[0]},${ll[1]},'Coordenadas')">📍 ${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}</div>`;return;}
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Chile')}&format=json&limit=5&countrycodes=cl`);
+      const data=await r.json();
+      if(!data.length){res.innerHTML='<div class="sri" style="color:#555">Sin resultados</div>';res.style.display='block';return;}
+      res.style.display='block';
+      res.innerHTML=data.map(d=>`<div class="sri" onclick="selRes(${d.lat},${d.lon},'${d.display_name.replace(/'/g,"\\'")}')">📍 ${d.display_name.split(',').slice(0,3).join(',')}</div>`).join('');
+    }catch(e){res.style.display='none';}
+  },500);
+}
+function selRes(lat,lon,nombre){const ll=[parseFloat(lat),parseFloat(lon)];document.getElementById('searchInput').value=nombre.split(',')[0];document.getElementById('searchResults').style.display='none';map.setView(ll,15);setDestino(ll);}
+function limpiarBusqueda(){document.getElementById('searchInput').value='';document.getElementById('searchResults').style.display='none';document.getElementById('searchClear').style.display='none';}
+async function reverseGeocode(ll,cb){try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${ll[0]}&lon=${ll[1]}&format=json`);const d=await r.json();cb(d.display_name?d.display_name.split(',').slice(0,3).join(','):'Ubicación marcada');}catch(e){cb('Ubicación marcada');}}
+
+// ── SOLICITAR Y GOOGLE SHEETS ──
+async function solicitar(){
+  if(pedido)return;
+  pedido=true;
+  const btn=document.getElementById('btn');btn.disabled=true;btn.textContent='⏳ Enviando solicitud...';
+  const motivo=selectedMotivo==='otro'?document.getElementById('motivoOtroInput').value:selectedMotivo||'No especificado';
+  const comunaNombre=comunaSeleccionada!==null?config.comunas[comunaSeleccionada]?.nombre||'':'';
+  const precioTexto=document.getElementById('precioRango').textContent;
+  const timestamp=new Date().toLocaleString('es-CL');
+  const row=[
+    timestamp,
+    usuario?.nombre||'',usuario?.telefono||'',usuario?.rut||'',usuario?.email||'',
+    document.getElementById('txtOrigen').textContent,
+    comunaNombre,
+    document.getElementById('txtDest').textContent,
+    comunaNombre,
+    config.vehiculos[selectedVehicle]?.nombre||'',
+    motivo,precioTexto,
+    '','','','','',
+    '⏳ Esperando confirmación'
+  ];
+
+  try{
+    const resp=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Solicitudes!A:R:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&key=AIzaSyDrojGFZpAVk-seCJwS_SnHHPUdjU69yW4`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({values:[row]})
+    });
+    const data=await resp.json();
+    if(data.updates){
+      const range=data.updates.updatedRange;
+      const match=range.match(/(\d+)$/);
+      if(match)solicitudRow=parseInt(match[1]);
+    }
+  }catch(e){console.log('Sheets append error:',e);}
+
+  btn.className='btn-sol btn-ok';btn.textContent='✅ Solicitud enviada — en espera';
+  document.getElementById('statusBar').classList.add('show');
+  document.getElementById('mainPanel').style.display='none';
+  iniciarPolling();
+}
+
+// ── POLLING DE ESTADO ──
+function iniciarPolling(){
+  if(pollingInterval)clearInterval(pollingInterval);
+  pollingInterval=setInterval(consultarEstado,15000);
+  consultarEstado();
+}
+
+async function consultarEstado(){
+  if(!solicitudRow||!config.sheetId)return;
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Solicitudes!A${solicitudRow}:R${solicitudRow}?key=AIzaSyDrojGFZpAVk-seCJwS_SnHHPUdjU69yW4`);
+    const data=await r.json();
+    if(!data.values||!data.values[0])return;
+    const fila=data.values[0];
+    const estado=fila[17]||'⏳ Esperando confirmación';
+    const conductor=fila[13]||'';
+    const patente=fila[14]||'';
+    const hora=fila[15]||'';
+    const precioFinal=fila[12]||'';
+    const obs=fila[16]||'';
+    actualizarEstadoUI(estado,conductor,patente,hora,precioFinal,obs);
+    if(estado.includes('Completado')||estado.includes('Cancelado'))clearInterval(pollingInterval);
+  }catch(e){console.log('Polling error:',e);}
+}
+
+function actualizarEstadoUI(estado,conductor,patente,hora,precioFinal,obs){
+  const el=document.getElementById('scEstado');
+  const infoRow=document.getElementById('scInfoRow');
+  const obsEl=document.getElementById('scObservaciones');
+  el.textContent=estado;
+  if(estado.includes('camino')){el.style.color='#e8a020';}
+  else if(estado.includes('Completado')){el.style.color='#4ade80';}
+  else if(estado.includes('Cancelado')){el.style.color='#f87171';}
+  else{el.style.color='#fff';}
+  if(conductor||patente||hora||precioFinal){
+    infoRow.style.display='flex';
+    document.getElementById('scConductor').textContent=conductor||'—';
+    document.getElementById('scPatente').textContent=patente||'—';
+    document.getElementById('scHora').textContent=hora||'—';
+    document.getElementById('scPrecioFinal').textContent=precioFinal||'—';
+  }
+  if(obs){obsEl.style.display='block';obsEl.textContent='📝 '+obs;}
+  // Steps
+  const steps=['⏳ Solicitud','📞 Contacto','🚛 En camino','✅ Completado'];
+  const stepEls=['scs0','scs1','scs2','scs3'];
+  let activeIdx=0;
+  if(estado.includes('contacto')||estado.includes('Contacto'))activeIdx=1;
+  else if(estado.includes('camino'))activeIdx=2;
+  else if(estado.includes('Completado'))activeIdx=3;
+  else if(estado.includes('Cancelado'))activeIdx=-1;
+  stepEls.forEach((id,i)=>{
+    const s=document.getElementById(id);
+    s.className='sc-step';
+    if(i<activeIdx)s.classList.add('done');
+    else if(i===activeIdx)s.classList.add('active');
+  });
+  if(estado.includes('camino')){
+    const iT=L.divIcon({html:'<div style="font-size:26px">🚛</div>',iconAnchor:[13,13],className:''});
+    if(!markerTruck&&origenLL){markerTruck=L.marker(origenLL,{icon:iT,zIndexOffset:1000}).addTo(map);}
+  }
+}
+
+// ── GOOGLE SHEETS: REGISTRAR CLIENTE ──
+async function registrarCliente(u){
+  try{
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Clientes!A:E:append?valueInputOption=RAW&key=AIzaSyDrojGFZpAVk-seCJwS_SnHHPUdjU69yW4`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({values:[[u.nombre,u.email,u.telefono,u.rut,new Date().toLocaleDateString('es-CL')]]})
+    });
+  }catch(e){console.log('Cliente sheets:',e);}
+}
+
+// ── ADMIN ──
+function cambiarTab(i){
+  document.querySelectorAll('.admin-tab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  document.querySelectorAll('.admin-panel').forEach((p,j)=>p.classList.toggle('active',i===j));
+}
+
+function renderAdmin(){
+  document.getElementById('rNocturno').value=config.rNocturno;
+  document.getElementById('rMargen').value=config.rMargen;
+  document.getElementById('radioTemuco').value=config.radioTemuco;
+  document.getElementById('radioAraucania').value=config.radioAraucania;
+  document.getElementById('adminSheetId').value=config.sheetId||'';
+  renderAdminVehiculos();renderTarifaTable();renderComunasList();renderMotivosAdmin();renderIRList();renderIRTarifaTable();
+}
+
+function renderAdminVehiculos(){
+  document.getElementById('adminVehiclesList').innerHTML=config.vehiculos.map((v,i)=>`
+    <div class="afield">
+      <input type="text" value="${v.icon}" id="vico_${i}" class="ain" style="width:36px;text-align:center"/>
+      <input type="text" value="${v.nombre}" id="vnom_${i}" class="ain" style="flex:1;text-align:left;width:120px"/>
+      <div class="atoggle ${v.activo?'on':''}" id="vact_${i}" onclick="tg(this)"><div class="atd" style="left:${v.activo?'17px':'3px'}"></div></div>
+      <button class="del-btn" onclick="eliminarVehiculo(${i})">🗑</button>
+    </div>`).join('');
+}
+function agregarVehiculo(){config.vehiculos.push({icon:'🚗',nombre:'Nuevo',activo:true});config.comunas.forEach(c=>{if(c.precios)c.precios.push(20000);});config.interRegionales.forEach(ir=>ir.precios.push(2000));renderAdminVehiculos();renderTarifaTable();renderIRTarifaTable();}
+function eliminarVehiculo(i){if(!confirm('¿Eliminar?'))return;config.vehiculos.splice(i,1);config.comunas.forEach(c=>{if(c.precios)c.precios.splice(i,1);});config.interRegionales.forEach(ir=>ir.precios.splice(i,1));renderAdminVehiculos();renderTarifaTable();renderIRTarifaTable();}
+
+function renderTarifaTable(){
+  const vActivos=config.vehiculos;
+  const modos=['fijo','km','fijo+km','confirmar'];
+  document.getElementById('tarifaTableWrap').innerHTML=`<table class="tarifa-table">
+    <thead><tr><th>Comuna</th><th>Modo</th>${vActivos.map(v=>`<th>${v.icon}</th>`).join('')}</tr></thead>
+    <tbody>${config.comunas.map((c,ci)=>`<tr>
+      <td>${c.nombre}</td>
+      <td><select class="modo-sel" id="cm_${ci}" onchange="config.comunas[${ci}].modo=this.value;renderTarifaTable()">
+        ${modos.map(m=>`<option value="${m}" ${c.modo===m?'selected':''}>${m}</option>`).join('')}
+      </select></td>
+      ${vActivos.map((_,vi)=>c.modo==='confirmar'?'<td style="color:#555">—</td>':`<td><input class="tin" type="number" value="${c.precios[vi]||0}" id="tp_${ci}_${vi}" min="0"/></td>`).join('')}
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderComunasList(){
+  document.getElementById('comunasList').innerHTML=config.comunas.map((c,i)=>`
+    <div class="afield">
+      <input type="text" value="${c.nombre}" id="cnom_${i}" class="ain" style="flex:1;text-align:left"/>
+      <input type="number" value="${config.comunasKmExtra?.[i]||0}" id="ckm_${i}" class="ain" style="width:70px" placeholder="$/km extra"/>
+      <button class="del-btn" onclick="eliminarComuna(${i})">🗑</button>
+    </div>`).join('');
+}
+function agregarComuna(){config.comunas.push({nombre:'Nueva comuna',modo:'fijo',precios:config.vehiculos.map(()=>0)});if(!config.comunasKmExtra)config.comunasKmExtra=[];config.comunasKmExtra.push(0);renderComunasList();renderTarifaTable();}
+function eliminarComuna(i){if(!confirm('¿Eliminar?'))return;config.comunas.splice(i,1);config.comunasKmExtra?.splice(i,1);renderComunasList();renderTarifaTable();}
+
+function renderIRList(){
+  document.getElementById('irList').innerHTML=config.interRegionales.map((ir,i)=>`
+    <div class="afield" style="flex-wrap:wrap;gap:4px">
+      <input type="text" value="${ir.nombre}" id="irn_${i}" class="ain" style="flex:1;text-align:left;min-width:150px"/>
+      <button class="del-btn" onclick="eliminarIR(${i})">🗑</button>
+    </div>`).join('');
+}
+function agregarIR(){config.interRegionales.push({nombre:'Nueva región',precios:config.vehiculos.map(()=>3000)});renderIRList();renderIRTarifaTable();}
+function eliminarIR(i){if(!confirm('¿Eliminar?'))return;config.interRegionales.splice(i,1);renderIRList();renderIRTarifaTable();}
+
+function renderIRTarifaTable(){
+  const vActivos=config.vehiculos;
+  document.getElementById('irTarifaWrap').innerHTML=`<table class="tarifa-table">
+    <thead><tr><th>Región destino</th>${vActivos.map(v=>`<th>${v.icon} $/km</th>`).join('')}</tr></thead>
+    <tbody>${config.interRegionales.map((ir,ri)=>`<tr>
+      <td>${ir.nombre}</td>
+      ${vActivos.map((_,vi)=>`<td><input class="tin" type="number" value="${ir.precios[vi]||3000}" id="irp_${ri}_${vi}" min="0"/></td>`).join('')}
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderMotivosAdmin(){
+  document.getElementById('motivosList').innerHTML=config.motivos.map((m,i)=>`
+    <div class="afield">
+      <input type="text" value="${m.icon}" id="mico_${i}" class="ain" style="width:36px;text-align:center"/>
+      <input type="text" value="${m.label}" id="mlbl_${i}" class="ain" style="flex:1;text-align:left"/>
+      <button class="del-btn" onclick="eliminarMotivo(${i})">🗑</button>
+    </div>`).join('');
+}
+function agregarMotivo(){config.motivos.push({icon:'❓',label:'Nuevo motivo'});renderMotivosAdmin();}
+function eliminarMotivo(i){config.motivos.splice(i,1);renderMotivosAdmin();}
+
+function guardarAdmin(){
+  config.rNocturno=parseInt(document.getElementById('rNocturno').value)||30;
+  config.rMargen=parseInt(document.getElementById('rMargen').value)||15;
+  config.radioTemuco=parseInt(document.getElementById('radioTemuco').value)||15;
+  config.radioAraucania=parseInt(document.getElementById('radioAraucania').value)||150;
+  config.sheetId=document.getElementById('adminSheetId').value.trim()||SHEET_ID;
+  config.disponibilidad={
+    lv:document.getElementById('togLV').classList.contains('on'),
+    sab:document.getElementById('togSab').classList.contains('on'),
+    dom:document.getElementById('togDom').classList.contains('on'),
+    fest:document.getElementById('togFest').classList.contains('on')
+  };
+  // Vehículos
+  config.vehiculos.forEach((v,i)=>{
+    v.icon=document.getElementById(`vico_${i}`)?.value||v.icon;
+    v.nombre=document.getElementById(`vnom_${i}`)?.value||v.nombre;
+    v.activo=document.getElementById(`vact_${i}`)?.classList.contains('on')??v.activo;
+  });
+  // Comunas precios
+  config.comunas.forEach((c,ci)=>{
+    c.nombre=document.getElementById(`cnom_${ci}`)?.value||c.nombre;
+    if(!config.comunasKmExtra)config.comunasKmExtra=[];
+    config.comunasKmExtra[ci]=parseInt(document.getElementById(`ckm_${ci}`)?.value)||0;
+    config.vehiculos.forEach((_,vi)=>{
+      const el=document.getElementById(`tp_${ci}_${vi}`);
+      if(el)c.precios[vi]=parseInt(el.value)||0;
+    });
+  });
+  // IR
+  config.interRegionales.forEach((ir,ri)=>{
+    ir.nombre=document.getElementById(`irn_${ri}`)?.value||ir.nombre;
+    config.vehiculos.forEach((_,vi)=>{
+      const el=document.getElementById(`irp_${ri}_${vi}`);
+      if(el)ir.precios[vi]=parseInt(el.value)||3000;
+    });
+  });
+  // Motivos
+  config.motivos.forEach((_,i)=>{
+    config.motivos[i].icon=document.getElementById(`mico_${i}`)?.value||config.motivos[i].icon;
+    config.motivos[i].label=document.getElementById(`mlbl_${i}`)?.value||config.motivos[i].label;
+  });
+  // Clave
+  const ca=document.getElementById('claveActual').value;
+  const cn=document.getElementById('claveNueva').value;
+  if(cn&&ca===config.claveAdmin){config.claveAdmin=cn;document.getElementById('claveActual').value='';document.getElementById('claveNueva').value='';}
+  lsSet('gh_cfg',config);
+  renderVehiculos();renderMotivos();llenarComunaSelect();
+  alert('✅ Cambios guardados');
+  mostrarPantalla('screenApp');
+}
+
+window.onload=()=>{
+  config=lsGet('gh_cfg')||JSON.parse(JSON.stringify(CFG_DEFAULT));
+  config.sheetId=config.sheetId||SHEET_ID;
+  const u=lsGet('gh_usr');
+  if(u&&u.registrado){usuario=u;entrarApp();}
+};
+</script>
+</body>
+</html>
