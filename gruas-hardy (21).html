@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Grúas Hardy - Depuración</title>
+<style>
+  /* Estilos mínimos para que se vea bien */
+  body { font-family: sans-serif; background: #0f111a; color: white; padding: 20px; }
+  button { background: #e8a020; border: none; padding: 12px; border-radius: 10px; font-weight: bold; margin-top: 10px; width: 100%; }
+  input, select { background: #1e1f2a; border: 1px solid #333; color: white; padding: 8px; margin: 5px 0; width: 100%; }
+  .card { background: #1e1f2a; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<h2>🚛 Grúas Hardy - Modo Depuración</h2>
+<div id="estadoSesion" class="card">Revisando sesión...</div>
+
+<div class="card">
+  <label>Comuna (selecciona una):</label>
+  <select id="comunaSelect">
+    <option value="Temuco">Temuco</option>
+    <option value="Vilcun">Vilcun</option>
+    <option value="Lautaro">Lautaro</option>
+  </select>
+  <label>Tu nombre (para la prueba):</label>
+  <input type="text" id="nombrePrueba" placeholder="Ej: Cliente Test">
+  <button id="btnSolicitarPrueba">📝 Solicitar grúa (prueba directa)</button>
+</div>
+
+<div class="card">
+  <h3>Resultado de la última acción:</h3>
+  <pre id="resultado" style="background:#000; padding: 8px; border-radius: 8px; font-size: 12px;"></pre>
+</div>
+
+<script>
+  // Configuración de Supabase (TUS DATOS)
+  const SUPABASE_URL = 'https://andersmceglkgjmlrcpw.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_vchgU-lsUACZ5BWoKABSTQ_xgY7Lx3V';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let sessionUser = null;
+
+  // Mostrar mensaje en el área de resultados
+  function log(mensaje, esError = false) {
+    const pre = document.getElementById('resultado');
+    pre.innerHTML += (esError ? '❌ ' : '✅ ') + mensaje + '\n';
+    pre.scrollTop = pre.scrollHeight;
+    if (esError) alert('Error: ' + mensaje);
+    else console.log(mensaje);
+  }
+
+  // Verificar sesión al cargar
+  window.onload = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      sessionUser = session.user;
+      document.getElementById('estadoSesion').innerHTML = `✅ Sesión iniciada como: ${sessionUser.email}`;
+      log(`Usuario autenticado: ${sessionUser.email}`);
+      // Si no tiene perfil en profiles, lo creamos automáticamente para evitar errores de RLS
+      const { data: perfil } = await supabase.from('profiles').select('id').eq('id', sessionUser.id).single();
+      if (!perfil) {
+        log('Creando perfil automático...');
+        await supabase.from('profiles').insert([{ id: sessionUser.id, nombre: sessionUser.email, telefono: '000', rut: '000' }]);
+      }
+    } else {
+      document.getElementById('estadoSesion').innerHTML = `⚠️ No hay sesión activa. <button onclick="iniciarSesionDemo()">Iniciar sesión de prueba</button>`;
+      log('No hay sesión. Usa el botón de abajo para iniciar sesión de prueba.', true);
+    }
+  };
+
+  // Función para iniciar sesión con un correo de prueba (si no tienes cuenta)
+  window.iniciarSesionDemo = async () => {
+    const emailDemo = 'test@cliente.com';
+    const passDemo = '12345678';
+    log('Intentando iniciar sesión con test@cliente.com / 12345678...');
+    const { data, error } = await supabase.auth.signInWithPassword({ email: emailDemo, password: passDemo });
+    if (error) {
+      // Si no existe, la creamos
+      if (error.message.includes('Invalid login credentials')) {
+        log('Usuario no existe, creando cuenta de prueba...');
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: emailDemo,
+          password: passDemo,
+          options: { data: { nombre: 'Usuario Test', telefono: '123', rut: '123' } }
+        });
+        if (signUpError) {
+          log('Error al crear cuenta: ' + signUpError.message, true);
+          return;
+        }
+        log('Cuenta creada. Iniciando sesión automáticamente...');
+        await iniciarSesionDemo(); // reintentar login
+      } else {
+        log('Error de login: ' + error.message, true);
+      }
+    } else {
+      sessionUser = data.user;
+      document.getElementById('estadoSesion').innerHTML = `✅ Sesión iniciada como: ${sessionUser.email}`;
+      log(`Sesión iniciada correctamente.`);
+      // Crear perfil si no existe
+      const { data: perfil } = await supabase.from('profiles').select('id').eq('id', sessionUser.id).single();
+      if (!perfil) {
+        await supabase.from('profiles').insert([{ id: sessionUser.id, nombre: sessionUser.email, telefono: '000', rut: '000' }]);
+        log('Perfil creado.');
+      }
+    }
+  };
+
+  // Botón de solicitar
+  document.getElementById('btnSolicitarPrueba').onclick = async () => {
+    if (!sessionUser) {
+      alert('No has iniciado sesión. Haz clic en "Iniciar sesión de prueba" primero.');
+      return;
+    }
+    const comuna = document.getElementById('comunaSelect').value;
+    const nombreCliente = document.getElementById('nombrePrueba').value.trim() || 'Cliente anónimo';
+    log(`Preparando solicitud para ${nombreCliente} en ${comuna}...`);
+    
+    try {
+      // Datos de la solicitud (simplificados pero completos)
+      const solicitud = {
+        user_id: sessionUser.id,
+        fecha: new Date().toLocaleString('es-CL'),
+        ubicacion: '-38.7359, -72.5904', // coordenada de ejemplo
+        comuna: comuna,
+        destino: 'No especificado',
+        vehiculo: 'Auto',
+        motivo: 'Prueba técnica',
+        precio_rescate: '$25.000',
+        precio_traslado: 'No solicitado',
+        precio_total: '$25.000',
+        estado: 'Esperando confirmacion'
+      };
+      
+      log('Enviando a Supabase...');
+      const { data, error } = await supabase
+        .from('solicitudes')
+        .insert([solicitud])
+        .select();
+      
+      if (error) throw error;
+      
+      log(`¡Solicitud guardada! ID: ${data[0].id}. Revisa la tabla "solicitudes" en Supabase.`);
+      alert('✅ Solicitud guardada correctamente en Supabase');
+    } catch (err) {
+      log(`ERROR: ${err.message}`, true);
+      alert('❌ Falló: ' + err.message);
+    }
+  };
+</script>
+</body>
+</html>
