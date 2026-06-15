@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Grúas Hardy</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f111a;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+
+/* SCREENS */
+.screen{display:none;flex-direction:column;height:100dvh;overflow:hidden}
+.screen.active{display:flex}
+
+/* LOGIN SCREEN */
+.login-bg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:0;background:#0f111a}
+.login-logo{background:#e8a020;border-radius:20px;width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px}
+.login-title{font-size:26px;font-weight:700;margin-bottom:6px;text-align:center}
+.login-sub{font-size:13px;color:#666;text-align:center;margin-bottom:36px;line-height:1.5}
+.btn-google{width:100%;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:14px 20px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;margin-bottom:12px}
+.btn-google img{width:20px;height:20px}
+.login-terms{font-size:11px;color:#444;text-align:center;line-height:1.6;margin-top:8px}
+.login-terms a{color:#e8a020;text-decoration:none}
+
+/* REGISTRO SCREEN */
+.reg-header{background:#0a0c14;padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(255,255,255,0.08)}
+.reg-header h2{font-size:15px;font-weight:600}
+.reg-header p{font-size:11px;color:#888}
+.reg-body{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:14px}
+.reg-avatar{width:64px;height:64px;border-radius:50%;background:#1e2030;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 4px;border:2px solid #2a2d3e}
+.reg-avatar img{width:64px;height:64px;border-radius:50%;object-fit:cover}
+.reg-name-auto{text-align:center;font-size:14px;font-weight:600;color:#fff}
+.reg-email-auto{text-align:center;font-size:12px;color:#888;margin-top:2px}
+.field-group{display:flex;flex-direction:column;gap:6px}
+.field-group label{font-size:11px;color:#888;font-weight:500}
+.field-group input{background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;padding:11px 14px;font-size:13px;color:#fff;outline:none;width:100%}
+.field-group input:focus{border-color:#e8a020}
+.field-group input::placeholder{color:#444}
+.field-hint{font-size:10px;color:#555;margin-top:2px}
+.btn-completar{background:#e8a020;border:none;border-radius:12px;color:#000;font-size:14px;font-weight:700;padding:14px;width:100%;cursor:pointer;margin-top:4px}
+.btn-completar:disabled{opacity:.4}
+
+/* APP HEADER */
+.app-header{background:#0a0c14;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0}
+.app-logo{background:#e8a020;border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.app-header-text h1{font-size:13px;font-weight:600}
+.app-header-text p{font-size:10px;color:#888}
+.app-online{margin-left:auto;background:rgba(34,197,94,0.15);border:0.5px solid rgba(34,197,94,0.4);border-radius:20px;padding:3px 8px;font-size:10px;color:#4ade80;display:flex;align-items:center;gap:4px}
+.pulse{width:5px;height:5px;background:#4ade80;border-radius:50%;animation:pulse 1.4s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+.user-chip{background:#161824;border-radius:20px;padding:3px 8px 3px 4px;display:flex;align-items:center;gap:5px;font-size:10px;color:#aaa;cursor:pointer}
+.user-chip img{width:20px;height:20px;border-radius:50%;object-fit:cover}
+.user-chip span{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* SEARCH BAR */
+.search-bar{background:#0a0c14;padding:8px 14px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;position:relative;z-index:20}
+.search-input-wrap{display:flex;align-items:center;gap:8px;background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;padding:8px 12px}
+.search-input-wrap input{flex:1;background:transparent;border:none;outline:none;font-size:12px;color:#fff}
+.search-input-wrap input::placeholder{color:#444}
+.search-results{position:absolute;top:100%;left:14px;right:14px;background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;z-index:100;overflow:hidden;display:none;max-height:180px;overflow-y:auto}
+.search-result-item{padding:10px 14px;font-size:12px;color:#ccc;border-bottom:0.5px solid #2a2d3e;cursor:pointer}
+.search-result-item:hover{background:#1e2030}
+.search-result-item:last-child{border-bottom:none}
+.search-icon{font-size:14px;color:#555}
+
+/* MAP */
+#map{flex:1;min-height:0;z-index:1;position:relative}
+.map-hint{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(10,12,20,0.9);border:0.5px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 14px;font-size:11px;color:#aaa;pointer-events:none;z-index:999;white-space:nowrap;transition:opacity .4s}
+.map-hint.hide{opacity:0}
+.locate-btn{position:absolute;bottom:12px;right:12px;z-index:999;background:#0a0c14;border:0.5px solid #2a2d3e;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+
+/* PANEL */
+.panel{background:#0a0c14;border-top:0.5px solid rgba(255,255,255,0.08);padding:10px 14px;flex-shrink:0}
+.steps{display:flex;align-items:center;gap:4px;margin-bottom:8px}
+.step{flex:1;text-align:center}
+.step-dot{width:20px;height:20px;border-radius:50%;border:1.5px solid #333;color:#555;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;margin:0 auto 2px}
+.step-dot.active{background:#e8a020;border-color:#e8a020;color:#000}
+.step-dot.done{background:#22c55e;border-color:#22c55e;color:#fff}
+.step label{font-size:9px;color:#555}
+.step-line{flex:0 0 14px;height:1px;background:#222}
+.fields{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
+.field-row{background:#161824;border:0.5px solid #2a2d3e;border-radius:9px;padding:7px 11px;display:flex;align-items:center;gap:9px}
+.field-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.field-dot.green{background:#22c55e}
+.field-dot.empty{border:1.5px dashed #444;background:transparent}
+.field-text{flex:1;font-size:11px;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.field-text.placeholder{color:#444}
+.vehicles{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:7px}
+.v-opt{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:5px 2px;text-align:center;cursor:pointer;font-size:9px;color:#666}
+.v-opt.sel{border-color:#e8a020;background:#1e1a0a;color:#b87c10}
+.v-opt .vi{font-size:15px;margin-bottom:1px}
+.v-opt .vp{font-size:9px;font-weight:600}
+.v-opt.sel .vp{color:#e8a020}
+.info-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:7px}
+.info-chip{background:#161824;border-radius:7px;padding:5px;text-align:center}
+.info-chip .num{font-size:12px;font-weight:600}
+.info-chip .lbl{font-size:9px;color:#555}
+.btn-solicitar{width:100%;background:#e8a020;border:none;border-radius:11px;color:#000;font-size:13px;font-weight:700;padding:11px;cursor:pointer}
+.btn-solicitar:disabled{opacity:.4;cursor:default}
+.btn-ok{background:#22c55e;color:#fff}
+
+/* STATUS */
+.status-bar{background:#052e16;border-top:0.5px solid rgba(34,197,94,0.3);padding:8px 14px;display:none;flex-shrink:0}
+.status-bar.show{display:block}
+.sc-title{font-size:12px;font-weight:600;color:#4ade80;margin-bottom:6px}
+.sc-steps{display:flex;gap:4px}
+.sc-step{flex:1;background:#0a1a0f;border-radius:6px;padding:5px 3px;text-align:center;font-size:9px;color:#555}
+.sc-step.done{background:#052e16;color:#4ade80}
+.sc-step.active{background:#1c1404;color:#e8a020}
+</style>
+</head>
+<body>
+
+<!-- PANTALLA LOGIN -->
+<div class="screen active" id="screenLogin">
+  <div class="login-bg">
+    <div class="login-logo">🚛</div>
+    <div class="login-title">Grúas Hardy</div>
+    <div class="login-sub">Solicita una grúa en minutos.<br>Servicio 24/7 en Temuco y región.</div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continuar con Google
+    </button>
+    <div class="login-terms">Al continuar aceptas nuestros <a href="#">Términos de uso</a><br>y <a href="#">Política de privacidad</a></div>
+  </div>
+</div>
+
+<!-- PANTALLA REGISTRO -->
+<div class="screen" id="screenRegistro">
+  <div class="reg-header">
+    <div>
+      <h2>Completa tu perfil</h2>
+      <p>Solo la primera vez — tarda 30 segundos</p>
+    </div>
+  </div>
+  <div class="reg-body">
+    <div style="text-align:center;padding:8px 0">
+      <div class="reg-avatar" id="regAvatar">👤</div>
+      <div class="reg-name-auto" id="regNombre">—</div>
+      <div class="reg-email-auto" id="regEmail">—</div>
+    </div>
+    <div class="field-group">
+      <label>Teléfono de contacto</label>
+      <input type="tel" id="inputTel" placeholder="+56 9 1234 5678" maxlength="15"/>
+      <div class="field-hint">Te llamaremos para confirmar el servicio</div>
+    </div>
+    <div class="field-group">
+      <label>RUT</label>
+      <input type="text" id="inputRut" placeholder="12.345.678-9" maxlength="12"/>
+      <div class="field-hint">Necesario para emitir boleta o factura</div>
+    </div>
+    <button class="btn-completar" id="btnCompletar" onclick="completarRegistro()">Listo, ir al mapa →</button>
+  </div>
+</div>
+
+<!-- PANTALLA APP PRINCIPAL -->
+<div class="screen" id="screenApp">
+  <div class="app-header">
+    <div class="app-logo">🚛</div>
+    <div class="app-header-text">
+      <h1>Grúas Hardy</h1>
+      <p>Servicio 24/7 · Temuco</p>
+    </div>
+    <div class="app-online"><div class="pulse"></div> En línea</div>
+    <div class="user-chip" id="userChip" onclick="verPerfil()">
+      <div id="chipAvatar" style="width:20px;height:20px;border-radius:50%;background:#1e2030;display:flex;align-items:center;justify-content:center;font-size:11px">👤</div>
+      <span id="chipNombre">Usuario</span>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar dirección o coordenadas..." oninput="buscarDireccion(this.value)" autocomplete="off"/>
+      <span id="searchClear" style="font-size:14px;color:#555;cursor:pointer;display:none" onclick="limpiarBusqueda()">✕</span>
+    </div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
+  <div id="map" style="position:relative">
+    <div class="map-hint" id="hint">📍 Toca el mapa o busca una dirección</div>
+    <div class="locate-btn" onclick="centrarGPS()" title="Mi ubicación">📍</div>
+  </div>
+
+  <div class="status-bar" id="statusBar">
+    <div class="sc-title">🚛 Grúa confirmada — en camino</div>
+    <div class="sc-steps">
+      <div class="sc-step done">✓ Solicitud</div>
+      <div class="sc-step active">🚛 En camino</div>
+      <div class="sc-step">📞 Contacto</div>
+      <div class="sc-step">✅ Servicio</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="steps">
+      <div class="step"><div class="step-dot done" id="sd1">✓</div><label>Origen</label></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-dot active" id="sd2">2</div><label>Destino</label></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-dot" id="sd3">3</div><label>Confirmar</label></div>
+    </div>
+    <div class="fields">
+      <div class="field-row">
+        <div class="field-dot green"></div>
+        <div class="field-text" id="txtOrigen">Detectando ubicación...</div>
+      </div>
+      <div class="field-row">
+        <div class="field-dot empty" id="dotDest"></div>
+        <div class="field-text placeholder" id="txtDest">Toca el mapa o busca destino</div>
+      </div>
+    </div>
+    <div class="vehicles">
+      <div class="v-opt sel" onclick="selV(this,'Automóvil',18500)"><div class="vi">🚗</div>Auto<div class="vp">$18.500</div></div>
+      <div class="v-opt" onclick="selV(this,'Camioneta',25000)"><div class="vi">🚙</div>Camioneta<div class="vp">$25.000</div></div>
+      <div class="v-opt" onclick="selV(this,'SUV/Van',28000)"><div class="vi">🚐</div>SUV/Van<div class="vp">$28.000</div></div>
+      <div class="v-opt" onclick="selV(this,'Camión',38000)"><div class="vi">🚚</div>Camión<div class="vp">$38.000</div></div>
+    </div>
+    <div class="info-row">
+      <div class="info-chip"><div class="num" id="iKm">—</div><div class="lbl">Distancia</div></div>
+      <div class="info-chip"><div class="num" id="iMin">—</div><div class="lbl">Llegada</div></div>
+      <div class="info-chip"><div class="num" id="iPrecio">—</div><div class="lbl">Precio est.</div></div>
+    </div>
+    <button class="btn-solicitar" id="btn" disabled onclick="solicitar()">🚛 Marca el destino primero</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── ESTADO GLOBAL ──
+let usuario = null;
+let map, markerOrigen, markerDestino, markerTruck, routeLine;
+let origenLL = null, destinoLL = null;
+let vBase = 18500, vNombre = 'Automóvil';
+let pedido = false;
+let searchTimeout = null;
+const TEMUCO = [-38.7359, -72.5904];
+
+// ── USUARIOS GUARDADOS (localStorage como base de datos local) ──
+function cargarUsuario() {
+  const u = localStorage.getItem('gruas_hardy_user');
+  return u ? JSON.parse(u) : null;
+}
+function guardarUsuario(u) {
+  localStorage.setItem('gruas_hardy_user', JSON.stringify(u));
+}
+
+// ── LOGIN SIMULADO CON GOOGLE ──
+// En producción real esto sería Firebase Auth con Google Sign-In
+function loginGoogle() {
+  // Simula el flujo de Google — en producción reemplazar con Firebase
+  const nombre = prompt('(Demo) Ingresa tu nombre completo:', 'Juan Pérez');
+  if (!nombre) return;
+  const email = prompt('(Demo) Ingresa tu correo Gmail:', 'juan@gmail.com');
+  if (!email) return;
+
+  const userTemp = { nombre, email, foto: null, telefono: '', rut: '', registrado: false };
+  usuario = userTemp;
+
+  // Mostrar datos en pantalla de registro
+  document.getElementById('regNombre').textContent = nombre;
+  document.getElementById('regEmail').textContent = email;
+  document.getElementById('regAvatar').textContent = nombre.charAt(0).toUpperCase();
+
+  // Verificar si ya completó el registro antes
+  const guardado = cargarUsuario();
+  if (guardado && guardado.email === email && guardado.registrado) {
+    usuario = guardado;
+    entrarApp();
+  } else {
+    mostrarPantalla('screenRegistro');
+  }
+}
+
+function completarRegistro() {
+  const tel = document.getElementById('inputTel').value.trim();
+  const rut = document.getElementById('inputRut').value.trim();
+  if (!tel || !rut) { alert('Por favor completa teléfono y RUT'); return; }
+
+  usuario.telefono = tel;
+  usuario.rut = rut;
+  usuario.registrado = true;
+  guardarUsuario(usuario);
+  entrarApp();
+}
+
+function entrarApp() {
+  mostrarPantalla('screenApp');
+  // Actualizar chip de usuario
+  document.getElementById('chipNombre').textContent = usuario.nombre.split(' ')[0];
+  iniciarMapa();
+}
+
+function verPerfil() {
+  alert(`👤 ${usuario.nombre}\n📧 ${usuario.email}\n📱 ${usuario.telefono}\n🪪 ${usuario.rut}`);
+}
+
+// ── PANTALLAS ──
+function mostrarPantalla(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'screenApp' && map) setTimeout(() => map.invalidateSize(), 100);
+}
+
+// ── MAPA ──
+function iniciarMapa() {
+  if (map) return;
+  map = L.map('map', { zoomControl: false, attributionControl: false }).setView(TEMUCO, 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  const iOrigen = L.divIcon({ html: '<div style="width:16px;height:16px;background:#22c55e;border:2.5px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(34,197,94,0.25)"></div>', iconAnchor: [8, 8], className: '' });
+  const iDestino = L.divIcon({ html: '<div style="background:#e8a020;color:#000;font-weight:700;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:26px;height:26px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px"><span style="transform:rotate(45deg)">B</span></div>', iconAnchor: [13, 26], className: '' });
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      origenLL = [pos.coords.latitude, pos.coords.longitude];
+      map.setView(origenLL, 15);
+      markerOrigen = L.marker(origenLL, { icon: iOrigen }).addTo(map);
+      reverseGeocode(origenLL, txt => document.getElementById('txtOrigen').textContent = txt);
+    }, () => setOrigenTemuco(iOrigen));
+  } else {
+    setOrigenTemuco(iOrigen);
+  }
+
+  map.on('click', e => {
+    if (pedido) return;
+    const ll = [e.latlng.lat, e.latlng.lng];
+    setDestino(ll);
+  });
+
+  window._iDestino = iDestino;
+}
+
+function setOrigenTemuco(icon) {
+  origenLL = TEMUCO;
+  if (!map) return;
+  const i = icon || L.divIcon({ html: '<div style="width:16px;height:16px;background:#22c55e;border:2.5px solid #fff;border-radius:50%"></div>', iconAnchor: [8, 8], className: '' });
+  markerOrigen = L.marker(origenLL, { icon: i }).addTo(map);
+  document.getElementById('txtOrigen').textContent = 'Temuco, Araucanía';
+}
+
+function setDestino(ll) {
+  destinoLL = ll;
+  const iDestino = window._iDestino || L.divIcon({ html: '<div style="background:#e8a020;color:#000;font-weight:700;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:26px;height:26px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px"><span style="transform:rotate(45deg)">B</span></div>', iconAnchor: [13, 26], className: '' });
+  if (markerDestino) markerDestino.remove();
+  markerDestino = L.marker(ll, { icon: iDestino }).addTo(map);
+  reverseGeocode(ll, txt => {
+    document.getElementById('txtDest').textContent = txt;
+    document.getElementById('txtDest').classList.remove('placeholder');
+    document.getElementById('dotDest').style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#e8a020;border:none';
+  });
+  calcRuta();
+  document.getElementById('sd2').textContent = '✓';
+  document.getElementById('sd2').className = 'step-dot done';
+  document.getElementById('sd3').className = 'step-dot active';
+  document.getElementById('hint').classList.add('hide');
+  limpiarBusqueda();
+}
+
+function centrarGPS() {
+  if (!map) return;
+  if (origenLL) { map.setView(origenLL, 16); return; }
+  navigator.geolocation && navigator.geolocation.getCurrentPosition(pos => {
+    origenLL = [pos.coords.latitude, pos.coords.longitude];
+    map.setView(origenLL, 16);
+  });
+}
+
+// ── BÚSQUEDA DE DIRECCIÓN ──
+function buscarDireccion(q) {
+  const clear = document.getElementById('searchClear');
+  const res = document.getElementById('searchResults');
+  clear.style.display = q ? 'block' : 'none';
+  if (!q || q.length < 3) { res.style.display = 'none'; return; }
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(async () => {
+    try {
+      // Detectar si es coordenadas (ej: -38.7359, -72.5904)
+      const coordMatch = q.match(/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/);
+      if (coordMatch) {
+        const ll = [parseFloat(coordMatch[1]), parseFloat(coordMatch[2])];
+        res.style.display = 'block';
+        res.innerHTML = `<div class="search-result-item" onclick="selResultado(${ll[0]}, ${ll[1]}, 'Coordenadas marcadas')">📍 Coordenadas: ${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}</div>`;
+        return;
+      }
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Temuco Chile')}&format=json&limit=5&countrycodes=cl`;
+      const r = await fetch(url);
+      const data = await r.json();
+      if (!data.length) { res.innerHTML = '<div class="search-result-item" style="color:#555">Sin resultados para esa dirección</div>'; res.style.display='block'; return; }
+      res.style.display = 'block';
+      res.innerHTML = data.map(d => `<div class="search-result-item" onclick="selResultado(${d.lat}, ${d.lon}, '${d.display_name.replace(/'/g,"\\'")}')">📍 ${d.display_name.split(',').slice(0,3).join(',')}</div>`).join('');
+    } catch(e) { res.style.display = 'none'; }
+  }, 500);
+}
+
+function selResultado(lat, lon, nombre) {
+  const ll = [parseFloat(lat), parseFloat(lon)];
+  document.getElementById('searchInput').value = nombre.split(',')[0];
+  document.getElementById('searchResults').style.display = 'none';
+  map.setView(ll, 16);
+  setDestino(ll);
+}
+
+function limpiarBusqueda() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('searchClear').style.display = 'none';
+}
+
+// ── CÁLCULO DE RUTA ──
+function calcRuta() {
+  if (!origenLL || !destinoLL) return;
+  const R = 6371;
+  const dLat = (destinoLL[0]-origenLL[0])*Math.PI/180;
+  const dLon = (destinoLL[1]-origenLL[1])*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(origenLL[0]*Math.PI/180)*Math.cos(destinoLL[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+  const km = (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))*1.3).toFixed(1);
+  const mins = Math.max(5, Math.round(km/0.5));
+  const total = Math.round((vBase + km*1200)/500)*500;
+  document.getElementById('iKm').textContent = km+' km';
+  document.getElementById('iMin').textContent = '~'+mins+' min';
+  document.getElementById('iPrecio').textContent = '$'+total.toLocaleString('es-CL');
+  if (routeLine) routeLine.remove();
+  routeLine = L.polyline([origenLL, destinoLL], { color:'#e8a020', weight:4, opacity:.85, dashArray:'8,4' }).addTo(map);
+  map.fitBounds(routeLine.getBounds(), { padding:[50,50] });
+  const btn = document.getElementById('btn');
+  btn.disabled = false;
+  btn.textContent = '🚛 Solicitar grúa — $'+total.toLocaleString('es-CL');
+}
+
+function selV(el, nombre, base) {
+  document.querySelectorAll('.v-opt').forEach(v => v.classList.remove('sel'));
+  el.classList.add('sel');
+  vNombre = nombre; vBase = base;
+  if (destinoLL) calcRuta();
+}
+
+// ── SOLICITAR ──
+function solicitar() {
+  if (pedido) return;
+  pedido = true;
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Enviando solicitud...';
+
+  const data = {
+    timestamp: new Date().toLocaleString('es-CL'),
+    cliente: usuario?.nombre || 'Sin nombre',
+    email: usuario?.email || '',
+    telefono: usuario?.telefono || '',
+    rut: usuario?.rut || '',
+    origen: document.getElementById('txtOrigen').textContent,
+    destino: document.getElementById('txtDest').textContent,
+    vehiculo: vNombre,
+    distancia: document.getElementById('iKm').textContent,
+    precio: document.getElementById('iPrecio').textContent,
+    estado: 'Nueva solicitud'
+  };
+
+  console.log('📋 Solicitud:', data);
+  // Aquí va la integración con Google Sheets cuando tengas el Sheet ID
+
+  setTimeout(() => {
+    btn.className = 'btn-solicitar btn-ok';
+    btn.textContent = '✅ Grúa confirmada — te llamaremos pronto';
+    document.getElementById('statusBar').classList.add('show');
+    const iTruck = L.divIcon({ html: '<div style="font-size:26px">🚛</div>', iconAnchor:[13,13], className:'' });
+    if (markerTruck) markerTruck.remove();
+    markerTruck = L.marker(origenLL, { icon: iTruck, zIndexOffset:1000 }).addTo(map);
+  }, 2000);
+}
+
+// ── GEOCODIFICACIÓN INVERSA ──
+async function reverseGeocode(ll, cb) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${ll[0]}&lon=${ll[1]}&format=json`);
+    const d = await r.json();
+    cb(d.display_name ? d.display_name.split(',').slice(0,2).join(',') : 'Ubicación marcada');
+  } catch(e) { cb('Ubicación marcada'); }
+}
+
+// ── INIT ──
+window.onload = () => {
+  const u = cargarUsuario();
+  if (u && u.registrado) {
+    usuario = u;
+    entrarApp();
+  }
+};
+</script>
+</body>
+</html>
