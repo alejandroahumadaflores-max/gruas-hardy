@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Grúas Hardy</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f111a;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;flex-direction:column;height:100dvh;overflow:hidden}
+.screen.active{display:flex}
+.login-bg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;background:#0f111a}
+.login-logo{background:#e8a020;border-radius:20px;width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px}
+.login-title{font-size:26px;font-weight:700;margin-bottom:6px;text-align:center}
+.login-sub{font-size:13px;color:#666;text-align:center;margin-bottom:36px;line-height:1.5}
+.btn-google{width:100%;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:14px 20px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;margin-bottom:10px}
+.btn-existe{width:100%;background:transparent;color:#888;border:0.5px solid #2a2d3e;border-radius:12px;padding:12px 20px;font-size:13px;cursor:pointer}
+.login-terms{font-size:11px;color:#444;text-align:center;line-height:1.6;margin-top:16px}
+.login-terms a{color:#e8a020;text-decoration:none}
+.btn-admin-link{background:none;border:none;color:#444;font-size:11px;margin-top:16px;cursor:pointer;text-decoration:underline}
+.app-header{background:#0a0c14;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0}
+.app-logo{background:#e8a020;border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.app-header h1{font-size:13px;font-weight:600}
+.app-header p{font-size:10px;color:#888}
+.online{margin-left:auto;background:rgba(34,197,94,0.15);border:0.5px solid rgba(34,197,94,0.4);border-radius:20px;padding:3px 8px;font-size:10px;color:#4ade80;display:flex;align-items:center;gap:4px}
+.pulse{width:5px;height:5px;background:#4ade80;border-radius:50%;animation:pulse 1.4s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+.uchip{background:#161824;border-radius:20px;padding:3px 8px 3px 4px;display:flex;align-items:center;gap:5px;font-size:10px;color:#aaa;cursor:pointer}
+.uini{width:20px;height:20px;border-radius:50%;background:#e8a020;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000}
+.precio-wrap{background:#0a0c14;padding:10px 14px;border-bottom:0.5px solid rgba(255,255,255,0.08);flex-shrink:0}
+.precio-inner{background:#161824;border-radius:12px;padding:10px 14px}
+.pm-top{display:flex;align-items:flex-start;gap:10px}
+.pm-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.pm-info{flex:1;min-width:0}
+.pm-ubi{font-size:11px;color:#888;margin-bottom:2px}
+.pm-val{font-size:17px;font-weight:700;color:#e8a020}
+.pm-aviso{font-size:9px;color:#666;margin-top:1px}
+.pm-badge{display:none;background:#1e2030;border-radius:20px;padding:2px 8px;font-size:9px;color:#888;margin-top:3px}
+.pm-right{text-align:right;flex-shrink:0;display:none}
+.pm-tiempo{font-size:13px;font-weight:600;color:#4ade80}
+.pm-km{font-size:9px;color:#555}
+.pm-desglose{display:none;margin-top:8px;border-top:0.5px solid #2a2d3e;padding-top:8px}
+.pm-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.pm-row span:first-child{color:#888}
+.pm-row span:last-child{color:#fff;font-weight:500}
+.pm-total{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;padding-top:4px;border-top:0.5px solid #2a2d3e}
+.pm-total span:first-child{color:#888}
+.pm-total span:last-child{color:#e8a020}
+#map{flex:1;min-height:0;z-index:1;position:relative}
+.hint{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(10,12,20,.92);border:0.5px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 14px;font-size:11px;color:#aaa;pointer-events:none;z-index:999;white-space:nowrap;display:none}
+.hint.show{display:block}
+.loc-btn{position:absolute;bottom:12px;right:12px;z-index:999;background:#0a0c14;border:0.5px solid #2a2d3e;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+.panel{background:#0a0c14;border-top:0.5px solid rgba(255,255,255,.08);padding:10px 14px;flex-shrink:0;overflow-y:auto;max-height:52vh}
+.sec{background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;padding:10px 12px;margin-bottom:7px}
+.sec-label{font-size:10px;color:#e8a020;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.sel-full{width:100%;background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:8px 10px;font-size:12px;color:#fff;outline:none;margin-bottom:6px}
+.sel-full:focus{border-color:#e8a020}
+.row-search{display:flex;gap:6px}
+.inp-search{flex:1;background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:7px 10px;font-size:12px;color:#fff;outline:none}
+.inp-search::placeholder{color:#444}
+.inp-search:focus{border-color:#e8a020}
+.btn-mapa{background:#1e2030;border:0.5px solid #2a2d3e;border-radius:8px;color:#888;font-size:11px;padding:7px 10px;cursor:pointer;white-space:nowrap}
+.dropdown{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;margin-top:4px;display:none;max-height:130px;overflow-y:auto}
+.drop-item{padding:8px 10px;font-size:11px;color:#ccc;border-bottom:0.5px solid #1a1d2a;cursor:pointer}
+.drop-item:last-child{border-bottom:none}
+.drop-item:hover{background:#161824}
+.vlbl{font-size:10px;color:#888;margin-bottom:4px;font-weight:500}
+.v-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:7px}
+.v-card{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:5px 2px;text-align:center;cursor:pointer;font-size:9px;color:#666}
+.v-card.sel{border-color:#e8a020;background:#1e1a0a;color:#b87c10}
+.v-card .vi{font-size:15px;margin-bottom:1px}
+.v-card .vp{font-size:9px;font-weight:700;margin-top:1px;color:#555}
+.v-card.sel .vp{color:#e8a020}
+.tr-header{display:flex;align-items:center;justify-content:space-between}
+.tr-title{font-size:11px;color:#888}
+.tr-body{display:none;flex-direction:column;gap:6px;margin-top:8px}
+.tr-body.show{display:flex}
+.tr-inp{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:8px 10px;font-size:12px;color:#fff;outline:none;width:100%}
+.tr-inp::placeholder{color:#444}
+.tr-inp:focus{border-color:#3b82f6}
+.tr-zona{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:7px 10px;font-size:11px;color:#fff;outline:none;width:100%}
+.tr-precio{font-size:11px;color:#3b82f6;font-weight:600;display:none}
+.tr-drop{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;margin-top:2px;display:none;max-height:120px;overflow-y:auto}
+.m-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:5px}
+.m-card{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:5px 2px;text-align:center;cursor:pointer;font-size:9px;color:#666}
+.m-card.sel{border-color:#3b82f6;background:#0f1a2e;color:#60a5fa}
+.m-card .mi{font-size:13px;margin-bottom:1px}
+.m-skip{font-size:10px;color:#555;cursor:pointer;text-align:right;margin-bottom:4px}
+.m-otro{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:6px 10px;font-size:11px;color:#fff;outline:none;width:100%;margin-bottom:6px;display:none}
+.m-otro::placeholder{color:#444}
+.btn-sol{width:100%;background:#e8a020;border:none;border-radius:11px;color:#000;font-size:13px;font-weight:700;padding:11px;cursor:pointer;margin-top:6px}
+.btn-sol:disabled{opacity:.4;cursor:default}
+.btn-ok{background:#22c55e;color:#fff}
+.status-wrap{background:#0a0c14;border-top:0.5px solid rgba(255,255,255,.08);padding:10px 14px;display:none;flex-shrink:0}
+.status-wrap.show{display:block}
+.status-inner{background:#161824;border-radius:12px;padding:12px 14px}
+.sc-estado{font-size:13px;font-weight:700;margin-bottom:8px}
+.sc-info{display:none;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.sc-chip{background:#0f111a;border-radius:8px;padding:5px 8px;font-size:10px;color:#888;flex:1;min-width:70px}
+.sc-chip strong{display:block;color:#fff;font-size:11px;margin-bottom:1px}
+.sc-obs{font-size:10px;color:#888;margin-top:4px;display:none}
+.sc-steps{display:flex;gap:3px;margin-top:8px}
+.sc-step{flex:1;background:#0f111a;border-radius:6px;padding:5px 2px;text-align:center;font-size:9px;color:#555}
+.sc-step.done{background:#052e16;color:#4ade80}
+.sc-step.active{background:#1c1404;color:#e8a020}
+.tog{width:28px;height:16px;background:#2a2d3e;border-radius:8px;position:relative;cursor:pointer;flex-shrink:0}
+.tog.on{background:#22c55e}
+.tog-dot{position:absolute;width:10px;height:10px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .15s}
+.tog.on .tog-dot{left:15px}
+.admin-header{background:#0a0c14;padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(255,255,255,.08);flex-shrink:0}
+.admin-header h2{font-size:14px;font-weight:600;flex:1}
+.back-btn{background:#161824;border:none;border-radius:8px;color:#aaa;padding:6px 10px;font-size:11px;cursor:pointer}
+.admin-tabs{display:flex;background:#0a0c14;border-bottom:0.5px solid rgba(255,255,255,.08);flex-shrink:0;overflow-x:auto}
+.atab{padding:10px 12px;font-size:11px;color:#666;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;flex-shrink:0}
+.atab.active{color:#e8a020;border-bottom-color:#e8a020}
+.abody{flex:1;overflow-y:auto;padding:12px}
+.apanel{display:none}
+.apanel.active{display:block}
+.asec{background:#161824;border:0.5px solid #2a2d3e;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.asec-title{padding:10px 14px;font-size:11px;font-weight:600;color:#e8a020;border-bottom:0.5px solid #2a2d3e;display:flex;align-items:center;justify-content:space-between}
+.add-sm{background:#1e2030;border:0.5px solid #2a2d3e;border-radius:6px;color:#888;font-size:10px;padding:3px 8px;cursor:pointer}
+.af{padding:8px 14px;border-bottom:0.5px solid #1a1d2a;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.af:last-child{border-bottom:none}
+.af label{font-size:11px;color:#888;flex:1;min-width:80px}
+.ain{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:7px;padding:5px 8px;font-size:11px;color:#fff;outline:none;text-align:right}
+.ain.l{text-align:left}.ain.f{text-align:left;flex:1}
+.atog{width:32px;height:18px;background:#2a2d3e;border-radius:9px;position:relative;cursor:pointer;flex-shrink:0}
+.atog.on{background:#22c55e}
+.atd{position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .15s}
+.atog.on .atd{left:17px}
+.del{background:none;border:none;color:#444;font-size:14px;cursor:pointer;padding:0 2px;flex-shrink:0}
+.del:hover{color:#f87171}
+.tscroll{overflow-x:auto;padding:8px}
+.ttable{border-collapse:collapse;font-size:10px;min-width:500px}
+.ttable th{padding:5px 6px;text-align:center;color:#888;border-bottom:0.5px solid #2a2d3e;font-weight:500;white-space:nowrap}
+.ttable th:first-child{text-align:left;padding-left:8px}
+.ttable td{padding:4px 3px;border-bottom:0.5px solid #1a1d2a;text-align:center}
+.ttable tr:last-child td{border-bottom:none}
+.ttable td:first-child{text-align:left;color:#ccc;padding-left:8px;white-space:nowrap}
+.tin{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:5px;padding:3px 4px;font-size:10px;color:#fff;outline:none;width:68px;text-align:right}
+.msel{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:5px;padding:3px 4px;font-size:9px;color:#fff;outline:none}
+.btn-save{background:#e8a020;border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;padding:12px;width:100%;cursor:pointer;margin-top:6px}
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-ov.show{display:flex}
+.mbox{background:#161824;border:0.5px solid #2a2d3e;border-radius:16px;padding:24px;width:290px;text-align:center}
+.mbox h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.mbox p{font-size:12px;color:#888;margin-bottom:16px}
+.minp{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:10px;padding:12px;font-size:16px;color:#fff;outline:none;width:100%;text-align:center;letter-spacing:4px;margin-bottom:12px}
+.minp-t{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:10px;padding:11px 14px;font-size:13px;color:#fff;outline:none;width:100%;margin-bottom:10px;text-align:left}
+.minp-t::placeholder,.minp::placeholder{color:#444}
+.minp-t:focus,.minp:focus{border-color:#e8a020}
+.mbtn{background:#e8a020;border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;padding:11px;width:100%;cursor:pointer;margin-bottom:8px}
+.mcancel{background:none;border:none;color:#555;font-size:12px;cursor:pointer}
+.merr{color:#f87171;font-size:11px;margin-bottom:8px;display:none}
+</style>
+</head>
+<body>
+
+<div class="screen active" id="sLogin">
+  <div class="login-bg">
+    <div class="login-logo">🚛</div>
+    <div class="login-title">Grúas Hardy</div>
+    <div class="login-sub">Solicita una grúa en minutos.<br>Servicio 24/7 en Temuco y región.</div>
+    <button class="btn-google" onclick="M('mNueva')">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Crear cuenta nueva
+    </button>
+    <button class="btn-existe" onclick="M('mLogin')">Ya tengo cuenta — Iniciar sesión</button>
+    <div class="login-terms">Al continuar aceptas nuestros <a href="#">Términos de uso</a> y <a href="#">Política de privacidad</a></div>
+    <button class="btn-admin-link" onclick="M('mAdmin')">⚙️ Acceso administrador</button>
+  </div>
+</div>
+
+<div class="screen" id="sApp">
+  <div class="app-header">
+    <div class="app-logo">🚛</div>
+    <div><h1>Grúas Hardy</h1><p>Servicio 24/7 · Temuco</p></div>
+    <div class="online"><div class="pulse"></div> En línea</div>
+    <div class="uchip" onclick="verPerfil()">
+      <div class="uini" id="uIni">?</div>
+      <span id="uNom">Usuario</span>
+    </div>
+  </div>
+
+  <div class="precio-wrap">
+    <div class="precio-inner">
+      <div class="pm-top">
+        <div class="pm-icon">🚛</div>
+        <div class="pm-info">
+          <div class="pm-ubi" id="pmUbi">Detectando ubicación del vehículo...</div>
+          <div class="pm-val" id="pmVal">—</div>
+          <div class="pm-aviso" id="pmAviso">⚠️ Valor estimado — se confirma al llamar</div>
+          <span class="pm-badge" id="pmBadge"></span>
+        </div>
+        <div class="pm-right" id="pmRight">
+          <div class="pm-tiempo" id="pmTiempo">—</div>
+          <div class="pm-km" id="pmKm">—</div>
+        </div>
+      </div>
+      <div class="pm-desglose" id="pmDesglose">
+        <div class="pm-row"><span>🚛 Rescate</span><span id="dRes">—</span></div>
+        <div class="pm-row"><span>📦 Traslado est.</span><span id="dTr">—</span></div>
+        <div class="pm-total"><span>Total estimado</span><span id="dTot">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="map" style="position:relative">
+    <div class="hint" id="hint"></div>
+    <div class="loc-btn" onclick="centrarGPS()">📍</div>
+  </div>
+
+  <div class="status-wrap" id="statusWrap">
+    <div class="status-inner">
+      <div class="sc-estado" id="scEstado">⏳ Esperando confirmación</div>
+      <div class="sc-info" id="scInfo">
+        <div class="sc-chip"><strong id="scCond">—</strong>Conductor</div>
+        <div class="sc-chip"><strong id="scPat">—</strong>Patente</div>
+        <div class="sc-chip"><strong id="scHora">—</strong>Llega a las</div>
+        <div class="sc-chip"><strong id="scPF">—</strong>Precio final</div>
+      </div>
+      <div class="sc-obs" id="scObs"></div>
+      <div class="sc-steps">
+        <div class="sc-step active" id="ss0">⏳ Solicitud</div>
+        <div class="sc-step" id="ss1">📞 Contacto</div>
+        <div class="sc-step" id="ss2">🚛 En camino</div>
+        <div class="sc-step" id="ss3">✅ Listo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="sec">
+      <div class="sec-label">📍 ¿Dónde está el vehículo averiado?</div>
+      <select class="sel-full" id="comunaSel" onchange="onComuna()">
+        <option value="">— Detectando por GPS —</option>
+      </select>
+      <div class="row-search">
+        <input type="text" class="inp-search" id="uvInput" placeholder="O busca la dirección exacta..." oninput="buscarUV(this.value)" autocomplete="off"/>
+        <button class="btn-mapa" onclick="activarVeh()">📍 Mapa</button>
+      </div>
+      <div class="dropdown" id="uvDrop"></div>
+    </div>
+
+    <div class="vlbl">¿Qué necesitas remolcar?</div>
+    <div class="v-grid" id="vGrid"></div>
+
+    <div class="sec">
+      <div class="tr-header">
+        <div class="tr-title">📦 ¿Necesitas traslado? <span style="color:#555;font-size:9px">(opcional)</span></div>
+        <div class="tog" id="togTr" onclick="toggleTr()"><div class="tog-dot"></div></div>
+      </div>
+      <div class="tr-body" id="trBody">
+        <input type="text" class="tr-inp" id="trInput" placeholder="Destino del traslado..." oninput="buscarTr(this.value)" autocomplete="off"/>
+        <div class="tr-drop" id="trDrop"></div>
+        <button class="btn-mapa" style="width:100%;text-align:left" onclick="activarDest()">🗺️ O marca el destino en el mapa</button>
+        <select class="tr-zona" id="trZona" onchange="calcTotal()">
+          <option value="araucania">Zona Araucanía</option>
+          <option value="interregional">Inter-regional (otra región)</option>
+        </select>
+        <div class="tr-precio" id="trPrecio"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="vlbl" style="margin-bottom:0">¿Qué pasó? <span style="color:#555;font-size:9px">(opcional)</span></div>
+      <div class="m-skip" onclick="skipMotivo()">Omitir →</div>
+    </div>
+    <div class="m-grid" id="mGrid"></div>
+    <input type="text" class="m-otro" id="mOtro" placeholder="Describe el motivo..."/>
+    <button class="btn-sol" id="btnSol" disabled onclick="solicitar()">🚛 Selecciona dónde está el vehículo</button>
+  </div>
+</div>
+
+<div class="screen" id="sAdmin">
+  <div class="admin-header">
+    <h2>⚙️ Panel administrador</h2>
+    <button class="back-btn" onclick="SP('sApp')">← Volver</button>
+  </div>
+  <div class="admin-tabs">
+    <div class="atab active" onclick="CT(0)">🏢 Empresa</div>
+    <div class="atab" onclick="CT(1)">🚛 Vehículos</div>
+    <div class="atab" onclick="CT(2)">💰 Tarifas</div>
+    <div class="atab" onclick="CT(3)">🗺️ Comunas</div>
+    <div class="atab" onclick="CT(4)">🌎 Inter-reg.</div>
+    <div class="atab" onclick="CT(5)">❓ Motivos</div>
+    <div class="atab" onclick="CT(6)">⚙️ General</div>
+  </div>
+  <div class="abody">
+    <div class="apanel active" id="ap0">
+      <div class="asec">
+        <div class="asec-title">📍 Ubicación empresa</div>
+        <div class="af"><label>Dirección</label><input type="text" id="aDir" class="ain f" value="Carr. Longitudinal Sur km 2,5"/></div>
+        <div class="af"><label>Latitud</label><input type="number" id="aLat" class="ain" style="width:110px" value="-38.7850" step="0.0001"/></div>
+        <div class="af"><label>Longitud</label><input type="number" id="aLng" class="ain" style="width:110px" value="-72.5980" step="0.0001"/></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">⏱ Tiempo estimado</div>
+        <div class="af"><label>Mostrar al cliente</label><div class="atog on" id="togT" onclick="tg(this)"><div class="atd" style="left:17px"></div></div></div>
+        <div class="af"><label>Velocidad promedio (km/h)</label><input type="number" id="aVel" class="ain" style="width:70px" value="60"/></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">📱 Contacto</div>
+        <div class="af"><label>Teléfono</label><input type="text" id="aTel" class="ain l" value="+56 9 7333 2811"/></div>
+        <div class="af"><label>WhatsApp</label><input type="text" id="aWsp" class="ain l" value="+56 9 7333 2811"/></div>
+      </div>
+    </div>
+    <div class="apanel" id="ap1">
+      <div class="asec">
+        <div class="asec-title">Tipos de vehículo <button class="add-sm" onclick="addVeh()">+ Agregar</button></div>
+        <div id="vList"></div>
+      </div>
+    </div>
+    <div class="apanel" id="ap2">
+      <div class="asec">
+        <div class="asec-title">Rescate por comuna × vehículo</div>
+        <p style="font-size:10px;color:#555;padding:8px 14px">Fijo=precio único | $/km=distancia empresa | Fijo+km=base+km | Confirmar=operador</p>
+        <div class="tscroll" id="tWrap"></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Traslado $/km × vehículo</div>
+        <div class="tscroll" id="trWrap"></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Recargos</div>
+        <div class="af"><label>Recargo nocturno (22:00–07:00)</label><input type="number" id="rNoc" class="ain" style="width:60px" value="30"/><span style="font-size:10px;color:#555">%</span></div>
+        <div class="af"><label>Margen estimado superior</label><input type="number" id="rMar" class="ain" style="width:60px" value="15"/><span style="font-size:10px;color:#555">%</span></div>
+      </div>
+    </div>
+    <div class="apanel" id="ap3">
+      <div class="asec">
+        <div class="asec-title">Comunas <button class="add-sm" onclick="addCom()">+ Agregar</button></div>
+        <div id="comList"></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Radios de zona</div>
+        <div class="af"><label>Radio Temuco (km)</label><input type="number" id="radT" class="ain" style="width:70px" value="15"/></div>
+        <div class="af"><label>Radio Araucanía (km)</label><input type="number" id="radA" class="ain" style="width:70px" value="150"/></div>
+      </div>
+    </div>
+    <div class="apanel" id="ap4">
+      <div class="asec">
+        <div class="asec-title">Rutas <button class="add-sm" onclick="addIR()">+ Agregar</button></div>
+        <div id="irList"></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Tarifas $/km × vehículo</div>
+        <div class="tscroll" id="irWrap"></div>
+      </div>
+    </div>
+    <div class="apanel" id="ap5">
+      <div class="asec">
+        <div class="asec-title">Motivos <button class="add-sm" onclick="addMot()">+ Agregar</button></div>
+        <div id="motList"></div>
+      </div>
+    </div>
+    <div class="apanel" id="ap6">
+      <div class="asec">
+        <div class="asec-title">Google Sheets</div>
+        <div class="af"><label>Sheet ID</label><input type="text" id="aSheet" class="ain f" placeholder="1-AfO2lC..."/></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Disponibilidad</div>
+        <div class="af"><label>Lunes a viernes</label><div class="atog on" id="tLV" onclick="tg(this)"><div class="atd" style="left:17px"></div></div></div>
+        <div class="af"><label>Sábado</label><div class="atog on" id="tSab" onclick="tg(this)"><div class="atd" style="left:17px"></div></div></div>
+        <div class="af"><label>Domingo</label><div class="atog" id="tDom" onclick="tg(this)"><div class="atd" style="left:3px"></div></div></div>
+        <div class="af"><label>Festivos</label><div class="atog on" id="tFest" onclick="tg(this)"><div class="atd" style="left:17px"></div></div></div>
+      </div>
+      <div class="asec">
+        <div class="asec-title">Seguridad</div>
+        <div class="af"><label>Clave actual</label><input type="password" id="cAct" class="ain" placeholder="••••"/></div>
+        <div class="af"><label>Nueva clave</label><input type="password" id="cNueva" class="ain" placeholder="••••"/></div>
+      </div>
+    </div>
+    <button class="btn-save" onclick="guardar()">💾 Guardar cambios</button>
+    <div style="height:24px"></div>
+  </div>
+</div>
+
+<div class="modal-ov" id="mNueva">
+  <div class="mbox">
+    <h3>👤 Crear cuenta</h3><p>Ingresa tus datos</p>
+    <input type="text" class="minp-t" id="ncN" placeholder="Nombre completo *"/>
+    <input type="email" class="minp-t" id="ncE" placeholder="Correo electrónico *"/>
+    <input type="tel" class="minp-t" id="ncT" placeholder="Teléfono *"/>
+    <input type="text" class="minp-t" id="ncR" placeholder="RUT *"/>
+    <div class="merr" id="ncErr">Completa todos los campos</div>
+    <button class="mbtn" onclick="crearCuenta()">Crear cuenta →</button>
+    <button class="mcancel" onclick="CM('mNueva')">Cancelar</button>
+  </div>
+</div>
+
+<div class="modal-ov" id="mLogin">
+  <div class="mbox">
+    <h3>👋 Iniciar sesión</h3><p>Ingresa el correo registrado</p>
+    <input type="email" class="minp-t" id="leE" placeholder="tu@correo.cl" onkeydown="if(event.key==='Enter')loginEx()"/>
+    <div class="merr" id="leErr">No encontramos esa cuenta</div>
+    <button class="mbtn" onclick="loginEx()">Ingresar →</button>
+    <button class="mcancel" onclick="CM('mLogin')">Cancelar</button>
+  </div>
+</div>
+
+<div class="modal-ov" id="mAdmin">
+  <div class="mbox">
+    <h3>🔐 Administrador</h3><p>Ingresa tu clave</p>
+    <input type="password" class="minp" id="mClave" placeholder="••••" maxlength="20" onkeydown="if(event.key==='Enter')checkClave()"/>
+    <div class="merr" id="mErr">Clave incorrecta</div>
+    <button class="mbtn" onclick="checkClave()">Entrar</button>
+    <button class="mcancel" onclick="CM('mAdmin')">Cancelar</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SID='1-AfO2lCQxOEHJqGXf56CtO-jFms7WAXxa7lniy70m9s';
+const AK='AIzaSyDrojGFZpAVk-seCJwS_SnHHPUdjU69yW4';
+const CFG={
+  pw:'1234',sheetId:SID,
+  emp:{lat:-38.7850,lng:-72.5980,dir:'Carr. Longitudinal Sur km 2,5, Padre las Casas',tel:'+56 9 7333 2811',wsp:'+56 9 7333 2811'},
+  tiempo:true,vel:60,radT:15,radA:150,rNoc:30,rMar:15,
+  disp:{lv:true,sab:true,dom:false,fest:true},
+  vehs:[
+    {i:'🚗',n:'Auto / Moto',a:true},{i:'🚙',n:'Camioneta',a:true},
+    {i:'🚐',n:'Furgón / Van',a:true},{i:'🚌',n:'Bus / Minibus',a:true},
+    {i:'🚚',n:'Camión',a:true},{i:'🚜',n:'Tractor / Maq.',a:true},
+    {i:'📦',n:'Contenedor',a:true},{i:'❓',n:'No sé / Otro',a:true}
+  ],
+  coms:[
+    {n:'Temuco (urbano)',m:'fijo',p:[25000,32000,40000,55000,65000,80000,95000,28000],ke:0,lat:-38.7359,lng:-72.5904},
+    {n:'Padre las Casas',m:'fijo',p:[20000,25000,32000,45000,55000,70000,85000,22000],ke:0,lat:-38.7850,lng:-72.5980},
+    {n:'Vilcún',m:'fijo',p:[45000,55000,65000,85000,100000,130000,160000,50000],ke:0,lat:-38.6547,lng:-72.4147},
+    {n:'Lautaro',m:'fijo',p:[50000,60000,70000,90000,110000,140000,170000,55000],ke:0,lat:-38.5267,lng:-72.4403},
+    {n:'Cunco',m:'fijo',p:[55000,65000,78000,100000,120000,150000,185000,60000],ke:0,lat:-38.9303,lng:-72.0247},
+    {n:'Freire',m:'fijo',p:[48000,58000,68000,88000,105000,135000,165000,52000],ke:0,lat:-38.9567,lng:-72.6303},
+    {n:'Pitrufquén',m:'fijo',p:[52000,62000,74000,95000,115000,145000,175000,57000],ke:0,lat:-38.9833,lng:-72.6500},
+    {n:'Gorbea',m:'fijo',p:[55000,66000,78000,100000,120000,152000,185000,60000],ke:0,lat:-39.0833,lng:-72.6667},
+    {n:'Pucón',m:'fijo',p:[85000,100000,120000,160000,190000,240000,290000,90000],ke:0,lat:-39.2833,lng:-71.9667},
+    {n:'Villarrica',m:'fijo',p:[75000,90000,108000,142000,170000,215000,260000,80000],ke:0,lat:-39.2833,lng:-72.2333},
+    {n:'Angol',m:'km',p:[1400,1700,2000,2700,3200,4200,5200,1600],ke:0,lat:-37.7967,lng:-72.7083},
+    {n:'Victoria',m:'km',p:[1300,1600,1900,2500,3000,3900,4800,1500],ke:0,lat:-38.2333,lng:-72.3333},
+    {n:'Curacautín',m:'fijo+km',p:[60000,72000,86000,112000,134000,168000,205000,65000],ke:800,lat:-38.4333,lng:-71.8833},
+    {n:'Lonquimay',m:'confirmar',p:[0,0,0,0,0,0,0,0],ke:0,lat:-38.4333,lng:-71.2333},
+    {n:'Carahue',m:'fijo',p:[58000,70000,83000,108000,129000,163000,198000,63000],ke:0,lat:-38.7167,lng:-73.1667},
+    {n:'Nueva Imperial',m:'fijo',p:[50000,60000,71000,93000,111000,140000,170000,55000],ke:0,lat:-38.7500,lng:-72.9500},
+    {n:'Otra / No listada',m:'confirmar',p:[0,0,0,0,0,0,0,0],ke:0,lat:-38.7359,lng:-72.5904}
+  ],
+  trKm:[1200,1500,1800,2500,3000,4000,5000,1400],
+  irs:[
+    {n:'Los Ríos / Valdivia',p:[2500,3000,3500,4500,5000,6000,7500,2800]},
+    {n:'Biobío / Concepción',p:[2200,2800,3200,4200,4800,5800,7200,2500]},
+    {n:'Los Lagos / Osorno',p:[2800,3400,4000,5200,6000,7200,9000,3200]},
+    {n:'Metropolitana',p:[3500,4200,5000,6500,7500,9000,11000,4000]}
+  ],
+  mots:[
+    {i:'🔋',l:'Batería'},{i:'🔧',l:'Falla mecánica'},{i:'💥',l:'Accidente'},
+    {i:'⛽',l:'Sin combustible'},{i:'🔑',l:'Llaves perdidas'},{i:'📍',l:'Atascado'},
+    {i:'🔥',l:'Sobrecalentamiento'},{i:'💨',l:'Neumático'},{i:'🌊',l:'Inundación'},
+    {i:'❄️',l:'Nieve / hielo'},{i:'🚧',l:'Choque'},{i:'🔩',l:'Falla eléctrica'},{i:'✏️',l:'Otro motivo'}
+  ]
+};
+
+let cfg=null,usr=null,map,mVeh,mDest,mEmp,mTruck,rLine;
+let vehLL=null,destLL=null,selVeh=0,selMot=null,comIdx=null;
+let pedido=false,mVehAct=false,mDestAct=false,solRow=null,pollInt=null,prResc=0;
+let uvT=null,trT=null;
+
+const G=id=>document.getElementById(id);
+const lsG=k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}};
+const lsS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+
+function M(id){
+  if(id==='mNueva'){['ncN','ncE','ncT','ncR'].forEach(x=>G(x).value='');G('ncErr').style.display='none';}
+  if(id==='mLogin'){G('leE').value='';G('leErr').style.display='none';}
+  if(id==='mAdmin'){G('mClave').value='';G('mErr').style.display='none';}
+  G(id).classList.add('show');
+  const first=G(id).querySelector('input');if(first)setTimeout(()=>first.focus(),100);
+}
+function CM(id){G(id).classList.remove('show');}
+
+function crearCuenta(){
+  const n=G('ncN').value.trim(),e=G('ncE').value.trim(),t=G('ncT').value.trim(),r=G('ncR').value.trim();
+  if(!n||!e||!t||!r){G('ncErr').style.display='block';return;}
+  usr={nombre:n,email:e,telefono:t,rut:r,registrado:true};
+  lsS('gh_u',usr);CM('mNueva');regCliente(usr);entrar();
+}
+function loginEx(){
+  const e=G('leE').value.trim();
+  const g=lsG('gh_u');
+  if(g&&g.email===e&&g.registrado){usr=g;CM('mLogin');entrar();}
+  else{G('leErr').style.display='block';}
+}
+function checkClave(){
+  if(G('mClave').value===cfg.pw){CM('mAdmin');SP('sAdmin');}
+  else{G('mErr').style.display='block';G('mClave').value='';}
+}
+function entrar(){
+  G('uNom').textContent=usr.nombre.split(' ')[0];
+  G('uIni').textContent=usr.nombre.charAt(0).toUpperCase();
+  renderVehs();renderMots();llenarSel();SP('sApp');initMap();
+}
+function verPerfil(){
+  if(confirm(`👤 ${usr.nombre}\n📧 ${usr.email}\n📱 ${usr.telefono}\n🪪 ${usr.rut}\n\n¿Cerrar sesión?`)){
+    localStorage.removeItem('gh_u');location.reload();
+  }
+}
+function SP(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  G(id).classList.add('active');
+  if(id==='sApp'&&map)setTimeout(()=>map.invalidateSize(),100);
+  if(id==='sAdmin')renderAdmin();
+}
+function tg(el){el.classList.toggle('on');const d=el.querySelector('.atd');if(d)d.style.left=el.classList.contains('on')?'17px':'3px';}
+function CT(i){
+  document.querySelectorAll('.atab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  document.querySelectorAll('.apanel').forEach((p,j)=>p.classList.toggle('active',i===j));
+}
+
+function initMap(){
+  if(map)return;
+  const eLL=[cfg.emp.lat,cfg.emp.lng];
+  map=L.map('map',{zoomControl:false,attributionControl:false}).setView(eLL,12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  const iE=L.divIcon({html:'<div style="background:#e8a020;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 3px rgba(232,160,32,.3)"></div>',iconAnchor:[6,6],className:''});
+  mEmp=L.marker(eLL,{icon:iE}).bindTooltip('Grúas Hardy').addTo(map);
+  window.iV=L.divIcon({html:'<div style="width:18px;height:18px;background:#22c55e;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(34,197,94,.3)"></div>',iconAnchor:[9,9],className:''});
+  window.iD=L.divIcon({html:'<div style="background:#3b82f6;color:#fff;font-weight:700;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:24px;height:24px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px"><span style="transform:rotate(45deg)">D</span></div>',iconAnchor:[12,24],className:''});
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      setVehLL([pos.coords.latitude,pos.coords.longitude],true);
+    },()=>{});
+  }
+  map.on('click',e=>{
+    if(pedido)return;
+    if(mVehAct){setVehLL([e.latlng.lat,e.latlng.lng],true);mVehAct=false;H('');}
+    else if(mDestAct){
+      destLL=[e.latlng.lat,e.latlng.lng];
+      if(mDest)mDest.remove();mDest=L.marker(destLL,{icon:window.iD}).addTo(map);
+      rgeo(destLL,t=>G('trInput').value=t);
+      drawRoute();mDestAct=false;H('');
+    }
+  });
+}
+
+function H(txt){const h=G('hint');h.textContent=txt;h.classList.toggle('show',!!txt);}
+
+function setVehLL(ll,detect){
+  vehLL=ll;
+  if(mVeh)mVeh.remove();
+  mVeh=L.marker(ll,{icon:window.iV}).addTo(map);
+  map.setView(ll,14);
+  if(detect)detectCom(ll);
+  else{calcResc();if(destLL)calcTotal();}
+}
+
+function detectCom(ll){
+  fetch(`https://nominatim.openstreetmap.org/reverse?lat=${ll[0]}&lon=${ll[1]}&format=json&zoom=10&accept-language=es`)
+  .then(r=>r.json()).then(d=>{
+    if(!d||!d.address)return;
+    const a=d.address;
+    const lugar=(a.city||a.town||a.village||a.municipality||a.county||'').toLowerCase().trim();
+    if(lugar)G('pmUbi').textContent=lugar.charAt(0).toUpperCase()+lugar.slice(1);
+    const nm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+    const lN=nm(lugar);
+    let bIdx=-1,bSc=0;
+    cfg.coms.forEach((c,i)=>{
+      const cN=nm(c.n.replace(' (urbano)','').replace('/ no listada',''));
+      if(lN===cN&&3>bSc){bIdx=i;bSc=3;}
+      else if(lN.includes(cN)&&cN.length>bSc){bIdx=i;bSc=cN.length;}
+      else if(cN.includes(lN)&&lN.length>bSc){bIdx=i;bSc=lN.length;}
+    });
+    if(bIdx>=0){comIdx=bIdx;G('comunaSel').value=bIdx;badge(cfg.coms[bIdx].n);}
+    calcResc();if(destLL)calcTotal();
+  }).catch(()=>{calcResc();});
+}
+
+function badge(n){const b=G('pmBadge');b.textContent='📍 '+n;b.style.display='inline-block';}
+
+function llenarSel(){
+  const s=G('comunaSel');
+  s.innerHTML='<option value="">— Detectando por GPS —</option>';
+  cfg.coms.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c.n;s.appendChild(o);});
+}
+
+function onComuna(){
+  const v=G('comunaSel').value;
+  comIdx=v!==''?parseInt(v):null;
+  if(comIdx===null)return;
+  const c=cfg.coms[comIdx];
+  badge(c.n);
+  // Centrar mapa en la comuna seleccionada y actualizar marcador
+  if(c.lat&&c.lng){
+    vehLL=[c.lat,c.lng];
+    if(mVeh)mVeh.remove();
+    mVeh=L.marker(vehLL,{icon:window.iV}).addTo(map);
+    map.setView(vehLL,13);
+    G('pmUbi').textContent=c.n;
+  }
+  calcResc();
+  if(destLL)calcTotal(); // async se manejan solos
+  // Actualizar precios en tarjetas
+  actualizarPreciosVeh();
+}
+
+function centrarGPS(){
+  navigator.geolocation?.getCurrentPosition(pos=>setVehLL([pos.coords.latitude,pos.coords.longitude],true));
+}
+function activarVeh(){mVehAct=true;H('📍 Toca el mapa donde está el vehículo averiado');}
+function activarDest(){mDestAct=true;H('🔵 Toca el mapa para marcar el destino del traslado');}
+
+let uvTm=null;
+function buscarUV(q){
+  if(!q||q.length<3){G('uvDrop').style.display='none';return;}
+  clearTimeout(uvTm);
+  uvTm=setTimeout(async()=>{
+    const res=G('uvDrop');
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Chile')}&format=json&limit=5&countrycodes=cl&accept-language=es`);
+      const data=await r.json();
+      if(!data.length){res.innerHTML='<div class="drop-item" style="color:#555">Sin resultados</div>';res.style.display='block';return;}
+      res.style.display='block';
+      res.innerHTML=data.map(d=>`<div class="drop-item" onclick="selUV(${d.lat},${d.lon},'${d.display_name.replace(/'/g,"\\'").replace(/\n/g,' ')}')">📍 ${d.display_name.split(',').slice(0,3).join(',')}</div>`).join('');
+    }catch(e){res.style.display='none';}
+  },500);
+}
+function selUV(lat,lon,n){
+  const ll=[parseFloat(lat),parseFloat(lon)];
+  G('uvInput').value=n.split(',')[0];G('uvDrop').style.display='none';
+  setVehLL(ll,true);
+}
+
+let trTm=null;
+function buscarTr(q){
+  if(!q||q.length<3){G('trDrop').style.display='none';return;}
+  clearTimeout(trTm);
+  trTm=setTimeout(async()=>{
+    const res=G('trDrop');
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Chile')}&format=json&limit=5&countrycodes=cl&accept-language=es`);
+      const data=await r.json();
+      if(!data.length){res.innerHTML='<div class="drop-item" style="color:#555">Sin resultados</div>';res.style.display='block';return;}
+      res.style.display='block';
+      res.innerHTML=data.map(d=>`<div class="drop-item" onclick="selTr(${d.lat},${d.lon},'${d.display_name.replace(/'/g,"\\'").replace(/\n/g,' ')}')">📍 ${d.display_name.split(',').slice(0,3).join(',')}</div>`).join('');
+    }catch(e){res.style.display='none';}
+  },500);
+}
+function selTr(lat,lon,n){
+  destLL=[parseFloat(lat),parseFloat(lon)];
+  G('trInput').value=n.split(',')[0];G('trDrop').style.display='none';
+  if(mDest)mDest.remove();mDest=L.marker(destLL,{icon:window.iD}).addTo(map);
+  drawRoute();
+}
+
+function toggleTr(){
+  const t=G('togTr');t.classList.toggle('on');t.querySelector('.tog-dot').style.left=t.classList.contains('on')?'15px':'3px';
+  G('trBody').classList.toggle('show',t.classList.contains('on'));
+  if(!t.classList.contains('on')){
+    destLL=null;if(mDest){mDest.remove();mDest=null;}if(rLine){rLine.remove();rLine=null;}
+    G('trInput').value='';G('trDrop').style.display='none';G('trPrecio').style.display='none';
+    G('pmDesglose').style.display='none';calcResc();
+  }
+}
+
+function drawRoute(){
+  // La ruta se dibuja en calcTotal con los km reales
+  if(!vehLL||!destLL)return;
+  calcTotal();
+}
+
+// Fallback: distancia línea recta
+function dkLinea(a,b){
+  const R=6371,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))*1.05;
+}
+// Ruta real por caminos usando Google Maps Directions API
+// Ruta real con geometría completa
+async function getRoute(a,b){
+  try{
+    const url=`https://router.project-osrm.org/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}?overview=full&geometries=geojson`;
+    const r=await fetch(url,{signal:AbortSignal.timeout(10000)});
+    const d=await r.json();
+    if(d.code==='Ok'&&d.routes&&d.routes[0]){
+      return {
+        km: d.routes[0].distance/1000,
+        coords: d.routes[0].geometry.coordinates.map(c=>[c[1],c[0]])
+      };
+    }
+  }catch(e){}
+  return {km:dkLinea(a,b),coords:[a,b]};
+}
+async function dk(a,b){
+  const r=await getRoute(a,b);
+  return r.km;
+}
+
+async function calcResc(){
+  if(comIdx===null){
+    G('pmVal').textContent='Selecciona la comuna del vehículo';
+    G('pmAviso').textContent='↑ Elige dónde está el vehículo averiado';
+    G('btnSol').disabled=true;G('btnSol').textContent='🚛 Selecciona dónde está el vehículo';
+    G('pmRight').style.display='none';prResc=0;return;
+  }
+  const c=cfg.coms[comIdx],vi=selVeh;
+  const eLL=[cfg.emp.lat,cfg.emp.lng];
+  const targetLL=vehLL||[c.lat||eLL[0],c.lng||eLL[1]];
+  const rescRoute=await getRoute(eLL,targetLL);
+  const km=rescRoute.km;
+  // Dibujar ruta empresa -> vehículo
+  if(window._empLine)window._empLine.remove();
+  window._empLine=L.polyline(rescRoute.coords,{color:'#e8a020',weight:3,opacity:.7}).addTo(map);
+  const esNoc=new Date().getHours()>=22||new Date().getHours()<7;
+  if(c.m==='confirmar'){
+    G('pmUbi').textContent=c.n;G('pmVal').textContent='Por confirmar';
+    G('pmAviso').textContent='📞 El operador te llamará con el precio';
+    G('pmBadge').textContent='📍 '+c.n;G('pmBadge').style.display='inline-block';
+    G('pmRight').style.display='none';G('btnSol').disabled=false;
+    G('btnSol').textContent='🚛 Solicitar — precio por confirmar';
+    prResc=0;return;
+  }
+  let p=0;
+  if(c.m==='fijo')p=c.p[vi]||0;
+  else if(c.m==='km')p=Math.round((c.p[vi]||1200)*km/1000)*1000;
+  else if(c.m==='fijo+km')p=(c.p[vi]||0)+Math.round((c.ke||800)*km/1000)*1000;
+  if(esNoc)p=Math.round(p*(1+cfg.rNoc/100)/1000)*1000;
+  const pMax=Math.round(p*(1+cfg.rMar/100)/1000)*1000;
+  prResc=p;
+  G('pmUbi').textContent=c.n;
+  G('pmVal').textContent=`$${p.toLocaleString('es-CL')} \u2013 $${pMax.toLocaleString('es-CL')}`;
+  G('pmAviso').textContent=esNoc?'🌙 Recargo nocturno incluido — se confirma al llamar':'⚠️ Valor estimado — se confirma al llamar';
+  G('pmBadge').textContent='📍 '+c.n;G('pmBadge').style.display='inline-block';
+  G('btnSol').disabled=false;G('btnSol').textContent=`🚛 Solicitar grúa \u2014 desde $${p.toLocaleString('es-CL')}`;
+  G('pmDesglose').style.display='none';
+  if(cfg.tiempo&&km>0){
+    const mins=Math.round(km/cfg.vel*60);
+    G('pmRight').style.display='block';G('pmTiempo').textContent=`~${mins} min`;G('pmKm').textContent=`${km.toFixed(1)} km`;
+  }else{G('pmRight').style.display='none';}
+  actualizarPreciosVeh();
+}
+
+function actualizarPreciosVeh(){
+  if(comIdx===null)return;
+  const c=cfg.coms[comIdx];
+  document.querySelectorAll('.v-card').forEach(card=>{
+    const vi=parseInt(card.dataset.vi||0);
+    const pEl=card.querySelector('.vp');
+    if(pEl)pEl.textContent=c.m!=='confirmar'&&c.p[vi]?'$'+c.p[vi].toLocaleString('es-CL'):'';
+  });
+}
+
+async function calcTotal(){
+  const t=G('togTr');
+  if(!t.classList.contains('on'))return;
+  if(!destLL||!vehLL)return;
+  const vi=selVeh,zona=G('trZona').value;
+  // Una sola llamada: obtener ruta + km + dibujar
+  const route=await getRoute(vehLL,destLL);
+  const km=route.km;
+  // Dibujar ruta real en el mapa
+  if(rLine)rLine.remove();
+  rLine=L.polyline(route.coords,{color:'#3b82f6',weight:4,opacity:.85}).addTo(map);
+  const bounds=L.latLngBounds([[cfg.emp.lat,cfg.emp.lng],vehLL,destLL]);
+  map.fitBounds(bounds,{padding:[40,40]});
+  let kp=zona==='interregional'?(cfg.irs[0]?.p[vi]||3000):(cfg.trKm[vi]||1200);
+  const ptr=Math.round(km*kp/1000)*1000;
+  const tot=prResc+ptr;
+  const totMax=Math.round(tot*(1+cfg.rMar/100)/1000)*1000;
+  G('trPrecio').style.display='block';
+  G('trPrecio').textContent=`+ Traslado: $${ptr.toLocaleString('es-CL')} (${km.toFixed(1)} km × $${kp.toLocaleString('es-CL')}/km)`;
+  if(prResc>0){
+    G('pmDesglose').style.display='block';
+    G('dRes').textContent=`$${prResc.toLocaleString('es-CL')}`;
+    G('dTr').textContent=`$${ptr.toLocaleString('es-CL')}`;
+    G('dTot').textContent=`$${tot.toLocaleString('es-CL')} \u2013 $${totMax.toLocaleString('es-CL')}`;
+    G('btnSol').textContent=`🚛 Solicitar \u2014 total desde $${tot.toLocaleString('es-CL')}`;
+  }
+  window._pTr=`$${ptr.toLocaleString('es-CL')}`;window._pTot=`$${tot.toLocaleString('es-CL')} \u2013 $${totMax.toLocaleString('es-CL')}`;
+}
+
+function renderVehs(){
+  const c=G('vGrid');c.innerHTML='';
+  cfg.vehs.filter(v=>v.a).forEach((v,i)=>{
+    const ri=cfg.vehs.indexOf(v);
+    const com=comIdx!==null?cfg.coms[comIdx]:null;
+    const p=com&&com.m!=='confirmar'?(com.p[ri]||0):0;
+    const d=document.createElement('div');d.className='v-card'+(i===0?' sel':'');d.dataset.vi=ri;
+    d.innerHTML=`<div class="vi">${v.i}</div><div style="font-size:9px;line-height:1.2">${v.n}</div><div class="vp">${p?'$'+p.toLocaleString('es-CL'):''}</div>`;
+    d.onclick=()=>{document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selVeh=ri;calcResc();if(destLL)calcTotal();};
+    if(i===0)selVeh=ri;c.appendChild(d);
+  });
+}
+
+function renderMots(){
+  const c=G('mGrid');c.innerHTML='';
+  cfg.mots.forEach(m=>{
+    const d=document.createElement('div');d.className='m-card';
+    d.innerHTML=`<div class="mi">${m.i}</div>${m.l}`;
+    d.onclick=()=>{
+      document.querySelectorAll('.m-card').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');
+      if(m.l==='Otro motivo'){selMot='otro';G('mOtro').style.display='block';G('mOtro').focus();}
+      else{selMot=m.l;G('mOtro').style.display='none';}
+    };c.appendChild(d);
+  });
+}
+function skipMotivo(){selMot=null;document.querySelectorAll('.m-card').forEach(x=>x.classList.remove('sel'));G('mOtro').style.display='none';}
+
+async function solicitar(){
+  if(pedido)return;pedido=true;
+  const btn=G('btnSol');btn.disabled=true;btn.textContent='⏳ Enviando solicitud...';
+  const mot=selMot==='otro'?G('mOtro').value:selMot||'No especificado';
+  const comN=comIdx!==null?cfg.coms[comIdx]?.n:'No especificada';
+  const destT=G('trInput').value||'No solicitado';
+  const pRStr=G('pmVal').textContent;
+  const pTStr=window._pTr||'No solicitado';
+  const pTotStr=window._pTot||pRStr;
+  const ts=new Date().toLocaleString('es-CL');
+  const row=[ts,usr?.nombre||'',usr?.telefono||'',usr?.rut||'',usr?.email||'',
+    vehLL?`${vehLL[0].toFixed(5)}, ${vehLL[1].toFixed(5)}`:'',comN,destT,'',
+    cfg.vehs[selVeh]?.n||'',mot,pRStr,pTStr,pTotStr,'','','','','⏳ Esperando confirmación'];
+  try{
+    const resp=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/Solicitudes!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&key=${AK}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[row]})});
+    const data=await resp.json();
+    if(data.updates){const m=data.updates.updatedRange.match(/(\d+)$/);if(m)solRow=parseInt(m[1]);}
+  }catch(e){console.log('Sheets:',e);}
+  btn.className='btn-sol btn-ok';btn.textContent='✅ Solicitud enviada';
+  G('statusWrap').classList.add('show');G('panel').style.display='none';
+  if(pollInt)clearInterval(pollInt);pollInt=setInterval(poll,15000);poll();
+}
+
+async function poll(){
+  if(!solRow||!cfg.sheetId)return;
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/Solicitudes!A${solRow}:S${solRow}?key=${AK}`);
+    const d=await r.json();
+    if(!d.values||!d.values[0])return;
+    const f=d.values[0];
+    updUI(f[18]||'⏳ Esperando confirmación',f[14]||'',f[15]||'',f[16]||'',f[13]||'',f[17]||'');
+    if((f[18]||'').includes('Completado')||(f[18]||'').includes('Cancelado'))clearInterval(pollInt);
+  }catch(e){}
+}
+
+function updUI(est,cond,pat,hora,pf,obs){
+  const el=G('scEstado');el.textContent=est;
+  el.style.color=est.includes('camino')?'#e8a020':est.includes('Completado')?'#4ade80':est.includes('Cancelado')?'#f87171':'#fff';
+  if(cond||pat||hora||pf){
+    G('scInfo').style.display='flex';G('scCond').textContent=cond||'—';
+    G('scPat').textContent=pat||'—';G('scHora').textContent=hora||'—';G('scPF').textContent=pf||'—';
+  }
+  if(obs){G('scObs').style.display='block';G('scObs').textContent='📝 '+obs;}
+  let ai=0;
+  if(est.toLowerCase().includes('contacto'))ai=1;
+  else if(est.toLowerCase().includes('camino'))ai=2;
+  else if(est.toLowerCase().includes('completado'))ai=3;
+  ['ss0','ss1','ss2','ss3'].forEach((id,i)=>{
+    const s=G(id);s.className='sc-step';
+    if(i<ai)s.classList.add('done');else if(i===ai)s.classList.add('active');
+  });
+  if(est.includes('camino')&&!mTruck&&vehLL){
+    const iT=L.divIcon({html:'<div style="font-size:26px">🚛</div>',iconAnchor:[13,13],className:''});
+    mTruck=L.marker([cfg.emp.lat,cfg.emp.lng],{icon:iT,zIndexOffset:1000}).addTo(map);
+  }
+}
+
+async function regCliente(u){
+  try{
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/Clientes!A:E:append?valueInputOption=RAW&key=${AK}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[u.nombre,u.email,u.telefono,u.rut,new Date().toLocaleDateString('es-CL')]]})});
+  }catch(e){}
+}
+async function rgeo(ll,cb){
+  try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${ll[0]}&lon=${ll[1]}&format=json&accept-language=es`);const d=await r.json();cb(d.display_name?d.display_name.split(',').slice(0,3).join(','):'Destino');}
+  catch(e){cb('Destino marcado');}
+}
+
+function renderAdmin(){
+  G('aDir').value=cfg.emp.dir;G('aLat').value=cfg.emp.lat;G('aLng').value=cfg.emp.lng;
+  G('aTel').value=cfg.emp.tel||'';G('aWsp').value=cfg.emp.wsp||'';
+  const tt=G('togT');tt.classList.toggle('on',cfg.tiempo);const td=tt.querySelector('.atd');if(td)td.style.left=cfg.tiempo?'17px':'3px';
+  G('aVel').value=cfg.vel||60;G('rNoc').value=cfg.rNoc;G('rMar').value=cfg.rMar;
+  G('radT').value=cfg.radT;G('radA').value=cfg.radA;G('aSheet').value=cfg.sheetId||'';
+  ['tLV','tSab','tDom','tFest'].forEach((id,i)=>{
+    const k=['lv','sab','dom','fest'][i];const el=G(id);
+    el.classList.toggle('on',cfg.disp[k]);const d=el.querySelector('.atd');if(d)d.style.left=cfg.disp[k]?'17px':'3px';
+  });
+  rVList();rTTable();rTrTable();rCList();rIRList();rIRTable();rMList();
+}
+
+function rVList(){
+  G('vList').innerHTML=cfg.vehs.map((v,i)=>`<div class="af">
+    <input type="text" value="${v.i}" id="vi_${i}" class="ain" style="width:36px;text-align:center"/>
+    <input type="text" value="${v.n}" id="vn_${i}" class="ain f" style="text-align:left"/>
+    <div class="atog ${v.a?'on':''}" id="va_${i}" onclick="tg(this)"><div class="atd" style="left:${v.a?'17':'3'}px"></div></div>
+    <button class="del" onclick="delV(${i})">🗑</button>
+  </div>`).join('');
+}
+function addVeh(){cfg.vehs.push({i:'🚗',n:'Nuevo',a:true});cfg.coms.forEach(c=>{if(c.p)c.p.push(0);});cfg.trKm.push(1500);cfg.irs.forEach(ir=>ir.p.push(3000));rVList();rTTable();rTrTable();rIRTable();}
+function delV(i){if(!confirm('¿Eliminar?'))return;cfg.vehs.splice(i,1);cfg.coms.forEach(c=>{if(c.p)c.p.splice(i,1);});cfg.trKm.splice(i,1);cfg.irs.forEach(ir=>ir.p.splice(i,1));rVList();rTTable();rTrTable();rIRTable();}
+
+function rTTable(){
+  const ms=['fijo','km','fijo+km','confirmar'];
+  G('tWrap').innerHTML=`<table class="ttable"><thead><tr><th>Comuna</th><th>Modo</th><th>$/km extra</th>${cfg.vehs.map(v=>`<th>${v.i}</th>`).join('')}</tr></thead>
+  <tbody>${cfg.coms.map((c,ci)=>`<tr><td>${c.n}</td>
+    <td><select class="msel" id="cm_${ci}" onchange="cfg.coms[${ci}].m=this.value;rTTable()">${ms.map(m=>`<option value="${m}"${c.m===m?' selected':''}>${m}</option>`).join('')}</select></td>
+    <td><input class="tin" type="number" value="${c.ke||0}" id="ke_${ci}" style="width:55px"/></td>
+    ${cfg.vehs.map((_,vi)=>c.m==='confirmar'?'<td style="color:#555">—</td>':`<td><input class="tin" type="number" value="${c.p[vi]||0}" id="tp_${ci}_${vi}"/></td>`).join('')}
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function rTrTable(){
+  G('trWrap').innerHTML=`<table class="ttable"><thead><tr><th>Vehículo</th><th>$/km Araucanía</th></tr></thead>
+  <tbody>${cfg.vehs.map((v,i)=>`<tr><td>${v.i} ${v.n}</td><td><input class="tin" type="number" value="${cfg.trKm[i]||1200}" id="tk_${i}"/></td></tr>`).join('')}</tbody></table>`;
+}
+
+function rCList(){
+  G('comList').innerHTML=cfg.coms.map((c,i)=>`<div class="af">
+    <input type="text" value="${c.n}" id="cn_${i}" class="ain f" style="text-align:left"/>
+    <input type="number" value="${c.lat||0}" id="clat_${i}" class="ain" style="width:75px" step="0.0001"/>
+    <input type="number" value="${c.lng||0}" id="clng_${i}" class="ain" style="width:75px" step="0.0001"/>
+    <button class="del" onclick="delC(${i})">🗑</button>
+  </div>`).join('');
+}
+function addCom(){cfg.coms.push({n:'Nueva',m:'fijo',p:cfg.vehs.map(()=>0),ke:0,lat:-38.7359,lng:-72.5904});rCList();rTTable();}
+function delC(i){if(!confirm('¿Eliminar?'))return;cfg.coms.splice(i,1);rCList();rTTable();}
+
+function rIRList(){
+  G('irList').innerHTML=cfg.irs.map((ir,i)=>`<div class="af">
+    <input type="text" value="${ir.n}" id="irn_${i}" class="ain f" style="text-align:left"/>
+    <button class="del" onclick="delIR(${i})">🗑</button>
+  </div>`).join('');
+}
+function addIR(){cfg.irs.push({n:'Nueva región',p:cfg.vehs.map(()=>3000)});rIRList();rIRTable();}
+function delIR(i){if(!confirm('¿Eliminar?'))return;cfg.irs.splice(i,1);rIRList();rIRTable();}
+
+function rIRTable(){
+  G('irWrap').innerHTML=`<table class="ttable"><thead><tr><th>Región</th>${cfg.vehs.map(v=>`<th>${v.i} $/km</th>`).join('')}</tr></thead>
+  <tbody>${cfg.irs.map((ir,ri)=>`<tr><td>${ir.n}</td>${cfg.vehs.map((_,vi)=>`<td><input class="tin" type="number" value="${ir.p[vi]||3000}" id="irp_${ri}_${vi}"/></td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+function rMList(){
+  G('motList').innerHTML=cfg.mots.map((m,i)=>`<div class="af">
+    <input type="text" value="${m.i}" id="mi_${i}" class="ain" style="width:36px;text-align:center"/>
+    <input type="text" value="${m.l}" id="ml_${i}" class="ain f" style="text-align:left"/>
+    <button class="del" onclick="delM(${i})">🗑</button>
+  </div>`).join('');
+}
+function addMot(){cfg.mots.push({i:'❓',l:'Nuevo motivo'});rMList();}
+function delM(i){cfg.mots.splice(i,1);rMList();}
+
+function guardar(){
+  cfg.emp.dir=G('aDir').value;cfg.emp.lat=parseFloat(G('aLat').value)||cfg.emp.lat;cfg.emp.lng=parseFloat(G('aLng').value)||cfg.emp.lng;
+  cfg.emp.tel=G('aTel').value;cfg.emp.wsp=G('aWsp').value;
+  cfg.tiempo=G('togT').classList.contains('on');cfg.vel=parseInt(G('aVel').value)||60;
+  cfg.rNoc=parseInt(G('rNoc').value)||30;cfg.rMar=parseInt(G('rMar').value)||15;
+  cfg.radT=parseInt(G('radT').value)||15;cfg.radA=parseInt(G('radA').value)||150;
+  cfg.sheetId=G('aSheet').value.trim()||SID;
+  cfg.disp={lv:G('tLV').classList.contains('on'),sab:G('tSab').classList.contains('on'),dom:G('tDom').classList.contains('on'),fest:G('tFest').classList.contains('on')};
+  cfg.vehs.forEach((v,i)=>{v.i=G(`vi_${i}`)?.value||v.i;v.n=G(`vn_${i}`)?.value||v.n;v.a=G(`va_${i}`)?.classList.contains('on')??v.a;});
+  cfg.coms.forEach((c,ci)=>{
+    c.n=G(`cn_${ci}`)?.value||c.n;c.ke=parseInt(G(`ke_${ci}`)?.value)||0;
+    c.lat=parseFloat(G(`clat_${ci}`)?.value)||c.lat;c.lng=parseFloat(G(`clng_${ci}`)?.value)||c.lng;
+    cfg.vehs.forEach((_,vi)=>{const el=G(`tp_${ci}_${vi}`);if(el)c.p[vi]=parseInt(el.value)||0;});
+  });
+  cfg.trKm=cfg.vehs.map((_,i)=>parseInt(G(`tk_${i}`)?.value)||1200);
+  cfg.irs.forEach((ir,ri)=>{ir.n=G(`irn_${ri}`)?.value||ir.n;cfg.vehs.forEach((_,vi)=>{const el=G(`irp_${ri}_${vi}`);if(el)ir.p[vi]=parseInt(el.value)||3000;});});
+  cfg.mots.forEach((_,i)=>{cfg.mots[i].i=G(`mi_${i}`)?.value||cfg.mots[i].i;cfg.mots[i].l=G(`ml_${i}`)?.value||cfg.mots[i].l;});
+  const ca=G('cAct').value,cn=G('cNueva').value;
+  if(cn&&ca===cfg.pw){cfg.pw=cn;G('cAct').value='';G('cNueva').value='';}
+  lsS('gh_c',cfg);renderVehs();renderMots();llenarSel();alert('✅ Cambios guardados');SP('sApp');
+}
+
+window.onload=()=>{
+  const saved=lsG('gh_c');
+  cfg=saved?{...CFG,...saved}:JSON.parse(JSON.stringify(CFG));
+  if(!cfg.emp)cfg.emp=CFG.emp;
+  if(!cfg.trKm)cfg.trKm=CFG.trKm;
+  if(cfg.tiempo===undefined)cfg.tiempo=true;
+  if(!cfg.vel)cfg.vel=60;
+  cfg.sheetId=cfg.sheetId||SID;
+  const u=lsG('gh_u');
+  if(u&&u.registrado){usr=u;entrar();}
+};
+</script>
+</body>
+</html>
