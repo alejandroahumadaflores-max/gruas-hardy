@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #0f111a; color: white; }
+        button { background: #e8a020; border: none; padding: 12px; border-radius: 10px; font-weight: bold; margin-top: 10px; width: 100%; }
+        pre { background: #1e1f2a; padding: 10px; border-radius: 8px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h2>Prueba de conexión a Supabase</h2>
+    <button id="btnTest">▶️ Probar inserción en solicitudes</button>
+    <pre id="log">Esperando acción...</pre>
+
+    <script>
+        // Configuración (TUS DATOS)
+        const SUPABASE_URL = 'https://andersmceglkgjmlrcpw.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vchgU-lsUACZ5BWoKABSTQ_xgY7Lx3V';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const logDiv = document.getElementById('log');
+
+        function addLog(msg, isError = false) {
+            const line = (isError ? '❌ ' : '✅ ') + msg;
+            logDiv.innerText += line + '\n';
+            console.log(line);
+        }
+
+        // Iniciar sesión automática con un usuario de prueba (crea la cuenta si no existe)
+        async function autoLogin() {
+            addLog('Intentando auto-login con test@cliente.com...');
+            const email = 'test@cliente.com';
+            const password = '12345678';
+            
+            // Primero intentamos iniciar sesión
+            let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                addLog('No se pudo iniciar sesión: ' + error.message, true);
+                addLog('Creando nuevo usuario...');
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { nombre: 'Usuario Test', telefono: '123', rut: '123' } }
+                });
+                if (signUpError) {
+                    addLog('Error al crear usuario: ' + signUpError.message, true);
+                    return null;
+                }
+                addLog('Usuario creado. Ahora iniciando sesión...');
+                const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+                if (loginError) {
+                    addLog('Error en login tras crear: ' + loginError.message, true);
+                    return null;
+                }
+                return loginData.user;
+            }
+            addLog('Sesión iniciada: ' + data.user.email);
+            return data.user;
+        }
+
+        // Probar inserción en solicitudes
+        async function testInsert(user) {
+            addLog('Insertando solicitud de prueba...');
+            const testData = {
+                user_id: user.id,
+                fecha: new Date().toISOString(),
+                comuna: 'Vilcun (prueba)',
+                vehiculo: 'Auto',
+                estado: 'Prueba desde celular'
+            };
+            const { data, error } = await supabase
+                .from('solicitudes')
+                .insert([testData])
+                .select();
+            if (error) {
+                addLog('ERROR al insertar: ' + error.message, true);
+                return;
+            }
+            addLog('✅ Inserción exitosa. ID: ' + data[0].id);
+        }
+
+        // Al cargar la página, intentar auto-login y habilitar botón
+        window.onload = async () => {
+            addLog('Cargando...');
+            const user = await autoLogin();
+            if (!user) {
+                addLog('No se pudo obtener usuario. Revisa tu conexión o las credenciales de Supabase.', true);
+                document.getElementById('btnTest').disabled = true;
+                return;
+            }
+            addLog('Usuario listo: ' + user.email);
+            
+            // Verificar si la tabla solicitudes existe y tiene políticas (intentando un select)
+            const { error: selectError } = await supabase.from('solicitudes').select('id').limit(1);
+            if (selectError) {
+                addLog('⚠️ La tabla solicitudes no es accesible: ' + selectError.message, true);
+                addLog('Asegúrate de haber creado la tabla y las políticas RLS.', true);
+            } else {
+                addLog('Tabla solicitudes accesible correctamente.');
+            }
+            
+            document.getElementById('btnTest').onclick = () => testInsert(user);
+        };
+    </script>
+</body>
+</html>
