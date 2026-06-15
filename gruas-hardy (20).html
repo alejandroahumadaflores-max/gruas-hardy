@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Grúas Hardy - Con Supabase</title>
+<style>
+/* ========== ESTILOS COMPLETOS ========== */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f111a;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;flex-direction:column;height:100dvh;overflow:hidden}
+.screen.active{display:flex}
+.login-bg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px}
+.login-logo{background:#e8a020;border-radius:20px;width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px}
+.login-title{font-size:26px;font-weight:700;margin-bottom:6px;text-align:center}
+.login-sub{font-size:13px;color:#666;text-align:center;margin-bottom:36px;line-height:1.5}
+.btn-g{width:100%;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:14px 20px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;margin-bottom:10px}
+.btn-ex{width:100%;background:transparent;color:#888;border:0.5px solid #2a2d3e;border-radius:12px;padding:12px;font-size:13px;cursor:pointer}
+.login-terms{font-size:11px;color:#444;text-align:center;line-height:1.6;margin-top:16px}
+.btn-adm{background:none;border:none;color:#444;font-size:11px;margin-top:16px;cursor:pointer}
+.app-hdr{background:#0a0c14;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(255,255,255,.08);flex-shrink:0}
+.app-logo{background:#e8a020;border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.app-hdr h1{font-size:13px;font-weight:600}
+.app-hdr p{font-size:10px;color:#888}
+.online{margin-left:auto;background:rgba(34,197,94,.15);border:0.5px solid rgba(34,197,94,.4);border-radius:20px;padding:3px 8px;font-size:10px;color:#4ade80;display:flex;align-items:center;gap:4px}
+.pulse{width:5px;height:5px;background:#4ade80;border-radius:50%;animation:pulse 1.4s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+.uchip{background:#161824;border-radius:20px;padding:3px 8px 3px 4px;display:flex;align-items:center;gap:5px;font-size:10px;color:#aaa;cursor:pointer}
+.uini{width:20px;height:20px;border-radius:50%;background:#e8a020;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000}
+.precio-wrap{background:#0a0c14;padding:10px 14px;border-bottom:0.5px solid rgba(255,255,255,.08);flex-shrink:0}
+.precio-inner{background:#161824;border-radius:12px;padding:10px 14px}
+.pm-top{display:flex;align-items:flex-start;gap:10px}
+.pm-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.pm-info{flex:1}
+.pm-ubi{font-size:11px;color:#888;margin-bottom:2px}
+.pm-val{font-size:17px;font-weight:700;color:#e8a020}
+.pm-aviso{font-size:9px;color:#666;margin-top:1px}
+.pm-badge{display:none;background:#1e2030;border-radius:20px;padding:2px 8px;font-size:9px;color:#888;margin-top:3px}
+.pm-right{text-align:right;flex-shrink:0;display:none}
+.pm-tiempo{font-size:13px;font-weight:600;color:#4ade80}
+.pm-km{font-size:9px;color:#555}
+.pm-desglose{display:none;margin-top:8px;border-top:0.5px solid #2a2d3e;padding-top:8px}
+.pm-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.pm-row span:first-child{color:#888}
+.pm-row span:last-child{color:#fff;font-weight:500}
+.pm-total{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;padding-top:4px;border-top:0.5px solid #2a2d3e}
+.pm-total span:first-child{color:#888}
+.pm-total span:last-child{color:#e8a020}
+#map{flex:1;min-height:0;z-index:1;position:relative}
+.hint{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(10,12,20,.92);border:0.5px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 14px;font-size:11px;color:#aaa;pointer-events:none;z-index:999;white-space:nowrap;display:none}
+.hint.show{display:block}
+.loc-btn{position:absolute;bottom:12px;right:12px;z-index:999;background:#0a0c14;border:0.5px solid #2a2d3e;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+.panel{background:#0a0c14;border-top:0.5px solid rgba(255,255,255,.08);padding:8px 12px;flex-shrink:0;overflow-y:auto;max-height:44vh}
+.sec{background:#161824;border:0.5px solid #2a2d3e;border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.sec-lbl{font-size:10px;color:#e8a020;font-weight:600;margin-bottom:6px}
+.sel-full{width:100%;background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:8px 10px;font-size:12px;color:#fff;outline:none;margin-bottom:6px}
+.row-s{display:flex;gap:6px}
+.inp-s{flex:1;background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:7px 10px;font-size:12px;color:#fff;outline:none}
+.btn-map{background:#1e2030;border:0.5px solid #2a2d3e;border-radius:8px;color:#888;font-size:11px;padding:7px 10px;cursor:pointer}
+.drop{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;margin-top:4px;display:none;max-height:130px;overflow-y:auto}
+.drop-item{padding:8px 10px;font-size:11px;color:#ccc;border-bottom:0.5px solid #1a1d2a;cursor:pointer}
+.drop-item:hover{background:#161824}
+.vlbl{font-size:10px;color:#888;margin-bottom:4px;font-weight:500}
+.v-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:6px}
+.v-card{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:5px 2px;text-align:center;cursor:pointer;font-size:9px;color:#666}
+.v-card.sel{border-color:#e8a020;background:#1e1a0a;color:#b87c10}
+.v-card .vi{font-size:15px;margin-bottom:1px}
+.v-card .vp{font-size:9px;font-weight:700;margin-top:1px;color:#555}
+.v-card.sel .vp{color:#e8a020}
+.tr-hdr{display:flex;align-items:center;justify-content:space-between}
+.tr-title{font-size:11px;color:#888}
+.tr-body{display:none;flex-direction:column;gap:6px;margin-top:8px}
+.tr-body.show{display:flex}
+.tr-inp{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:8px 10px;font-size:12px;color:#fff;outline:none;width:100%}
+.tr-zona{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:8px;padding:7px 10px;font-size:11px;color:#fff;width:100%}
+.tr-precio{font-size:11px;color:#3b82f6;font-weight:600;display:none}
+.m-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:5px}
+.m-card{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:5px 2px;text-align:center;cursor:pointer;font-size:9px;color:#666}
+.m-card.sel{border-color:#3b82f6;background:#0f1a2e;color:#60a5fa}
+.m-card .mi{font-size:13px}
+.m-skip{font-size:10px;color:#555;cursor:pointer;text-align:right;margin-bottom:4px}
+.m-otro{background:#161824;border:0.5px solid #2a2d3e;border-radius:8px;padding:6px 10px;font-size:11px;color:#fff;width:100%;margin-bottom:6px;display:none}
+.btn-sol{width:100%;background:#e8a020;border:none;border-radius:11px;color:#000;font-size:13px;font-weight:700;padding:11px;cursor:pointer;margin-top:6px}
+.btn-sol:disabled{opacity:.4;cursor:default}
+.btn-ok{background:#22c55e;color:#fff}
+.status-wrap{background:#0a0c14;border-top:0.5px solid rgba(255,255,255,.08);padding:10px 14px;display:none;flex-shrink:0}
+.status-wrap.show{display:block}
+.status-inner{background:#161824;border-radius:12px;padding:12px 14px}
+.sc-estado{font-size:13px;font-weight:700;margin-bottom:8px}
+.sc-info{display:none;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.sc-chip{background:#0f111a;border-radius:8px;padding:5px 8px;font-size:10px;color:#888;flex:1;min-width:70px}
+.sc-chip strong{display:block;color:#fff;font-size:11px;margin-bottom:1px}
+.sc-obs{font-size:10px;color:#888;margin-top:4px;display:none}
+.sc-steps{display:flex;gap:3px;margin-top:8px}
+.sc-step{flex:1;background:#0f111a;border-radius:6px;padding:5px 2px;text-align:center;font-size:9px;color:#555}
+.sc-step.done{background:#052e16;color:#4ade80}
+.sc-step.active{background:#1c1404;color:#e8a020}
+.tog{width:28px;height:16px;background:#2a2d3e;border-radius:8px;position:relative;cursor:pointer;flex-shrink:0}
+.tog.on{background:#22c55e}
+.tog-dot{position:absolute;width:10px;height:10px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .15s}
+.tog.on .tog-dot{left:15px}
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-ov.show{display:flex}
+.mbox{background:#161824;border:0.5px solid #2a2d3e;border-radius:16px;padding:24px;width:290px;text-align:center}
+.mbox h3{font-size:15px;margin-bottom:6px}
+.mbox p{font-size:12px;color:#888;margin-bottom:16px}
+.minp-t{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:10px;padding:12px;font-size:14px;color:#fff;width:100%;margin-bottom:12px}
+.minp{background:#0f111a;border:0.5px solid #2a2d3e;border-radius:10px;padding:12px;font-size:16px;color:#fff;width:100%;text-align:center;margin-bottom:12px}
+.mbtn{background:#e8a020;border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;padding:11px;width:100%;cursor:pointer;margin-bottom:8px}
+.mcancel{background:none;border:none;color:#555;font-size:12px;cursor:pointer}
+.merr{color:#f87171;font-size:11px;margin-bottom:8px;display:none}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- PANTALLA LOGIN -->
+<div class="screen active" id="sLogin">
+  <div class="login-bg">
+    <div class="login-logo">🚛</div>
+    <div class="login-title">Grúas Hardy</div>
+    <div class="login-sub">Servicio 24/7 en Temuco y región.</div>
+    <button class="btn-g" onclick="showModal('mNueva')">📝 Crear cuenta nueva</button>
+    <button class="btn-ex" onclick="showModal('mLogin')">🔑 Ya tengo cuenta — Iniciar sesión</button>
+    <div class="login-terms">Al continuar aceptas nuestros términos.</div>
+    <button class="btn-adm" onclick="showModal('mAdmin')">⚙️ Admin</button>
+  </div>
+</div>
+
+<!-- PANTALLA PRINCIPAL (APP) -->
+<div class="screen" id="sApp">
+  <div class="app-hdr">
+    <div class="app-logo">🚛</div>
+    <div><h1>Grúas Hardy</h1><p>Servicio 24/7</p></div>
+    <div class="online"><div class="pulse"></div> En línea</div>
+    <div class="uchip" onclick="cerrarSesion()"><div class="uini" id="uIni">?</div><span id="uNom">Usuario</span></div>
+  </div>
+  <div class="precio-wrap">
+    <div class="precio-inner">
+      <div class="pm-top">
+        <div class="pm-icon">🚛</div>
+        <div class="pm-info">
+          <div class="pm-ubi" id="pmUbi">Selecciona comuna</div>
+          <div class="pm-val" id="pmVal">—</div>
+          <div class="pm-aviso" id="pmAviso">⚠️ Valor estimado</div>
+          <span class="pm-badge" id="pmBadge"></span>
+        </div>
+        <div class="pm-right" id="pmRight">
+          <div class="pm-tiempo" id="pmTiempo">—</div>
+          <div class="pm-km" id="pmKm">—</div>
+        </div>
+      </div>
+      <div class="pm-desglose" id="pmDesglose">
+        <div class="pm-row"><span>🚛 Rescate</span><span id="dRes">—</span></div>
+        <div class="pm-row"><span>📦 Traslado</span><span id="dTr">—</span></div>
+        <div class="pm-total"><span>Total</span><span id="dTot">—</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="map" style="position:relative">
+    <div class="hint" id="hint"></div>
+    <div class="loc-btn" onclick="centrarGPS()">📍</div>
+  </div>
+  <div class="status-wrap" id="statusWrap">
+    <div class="status-inner">
+      <div class="sc-estado" id="scEstado">⏳ Esperando</div>
+      <div class="sc-info" id="scInfo">
+        <div class="sc-chip"><strong id="scCond">—</strong>Conductor</div>
+        <div class="sc-chip"><strong id="scPat">—</strong>Patente</div>
+        <div class="sc-chip"><strong id="scHora">—</strong>Llega</div>
+        <div class="sc-chip"><strong id="scPF">—</strong>Precio</div>
+      </div>
+      <div class="sc-obs" id="scObs"></div>
+      <div class="sc-steps"><div class="sc-step active" id="ss0">⏳ Solicitud</div><div class="sc-step" id="ss1">📞 Contacto</div><div class="sc-step" id="ss2">🚛 En camino</div><div class="sc-step" id="ss3">✅ Listo</div></div>
+    </div>
+  </div>
+  <div class="panel" id="panel">
+    <div class="sec">
+      <div class="sec-lbl">📍 Vehículo averiado</div>
+      <select class="sel-full" id="comunaSel" onchange="onComuna()"><option value="">— Detectando GPS —</option></select>
+      <div class="row-s"><input class="inp-s" id="uvInput" placeholder="Dirección exacta..." oninput="buscarUV(this.value)"><button class="btn-map" onclick="activarVeh()">📍 Mapa</button></div>
+      <div class="drop" id="uvDrop"></div>
+    </div>
+    <div class="vlbl">Tipo de vehículo</div>
+    <div class="v-grid" id="vGrid"></div>
+    <div class="sec">
+      <div class="tr-hdr"><div class="tr-title">📦 Traslado (opcional)</div><div class="tog" id="togTr" onclick="toggleTr()"><div class="tog-dot"></div></div></div>
+      <div class="tr-body" id="trBody">
+        <input class="tr-inp" id="trInput" placeholder="Destino..." oninput="buscarTr(this.value)">
+        <div class="drop" id="trDrop"></div>
+        <button class="btn-map" onclick="activarDest()">🗺️ Marcar en mapa</button>
+        <select class="tr-zona" id="trZona" onchange="calcTotal()"><option value="araucania">Zona Araucanía</option><option value="interregional">Inter-regional</option></select>
+        <div class="tr-precio" id="trPrecio"></div>
+      </div>
+    </div>
+    <div class="vlbl">Motivo (opcional)</div>
+    <div class="m-grid" id="mGrid"></div>
+    <input class="m-otro" id="mOtro" placeholder="Describe el motivo...">
+    <button class="btn-sol" id="btnSol" disabled onclick="solicitar()">🚛 Solicitar grúa</button>
+  </div>
+</div>
+
+<!-- ADMIN simple -->
+<div class="screen" id="sAdmin">
+  <div style="background:#0a0c14;padding:12px;display:flex"><h2 style="flex:1">Admin</h2><button onclick="SP('sApp')">← Volver</button></div>
+  <div style="padding:12px"><p>Configuración local guardada.</p><button onclick="guardarCfg()">Guardar</button></div>
+</div>
+
+<!-- MODALES -->
+<div class="modal-ov" id="mNueva">
+  <div class="mbox">
+    <h3>Crear cuenta</h3>
+    <input class="minp-t" id="ncN" placeholder="Nombre completo">
+    <input class="minp-t" id="ncE" placeholder="Correo electrónico">
+    <input class="minp-t" id="ncT" placeholder="Teléfono">
+    <input class="minp-t" id="ncR" placeholder="RUT">
+    <input class="minp-t" type="password" id="ncP" placeholder="Contraseña">
+    <div class="merr" id="ncErr"></div>
+    <button class="mbtn" onclick="crearCuenta()">Crear</button>
+    <button class="mcancel" onclick="hideModal('mNueva')">Cancelar</button>
+  </div>
+</div>
+<div class="modal-ov" id="mLogin">
+  <div class="mbox">
+    <h3>Iniciar sesión</h3>
+    <input class="minp-t" id="leE" placeholder="Correo">
+    <input class="minp-t" type="password" id="leP" placeholder="Contraseña">
+    <div class="merr" id="leErr"></div>
+    <button class="mbtn" onclick="login()">Ingresar</button>
+    <button class="mcancel" onclick="hideModal('mLogin')">Cancelar</button>
+  </div>
+</div>
+<div class="modal-ov" id="mAdmin">
+  <div class="mbox">
+    <h3>Admin</h3>
+    <input class="minp" type="password" id="mClave" placeholder="Clave">
+    <div class="merr" id="mErr"></div>
+    <button class="mbtn" onclick="accederAdmin()">Entrar</button>
+    <button class="mcancel" onclick="hideModal('mAdmin')">Cancelar</button>
+  </div>
+</div>
+
+<script>
+// ========== CONFIG SUPABASE ==========
+const SUPABASE_URL = 'https://andersmceglkgjmlrcpw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_vchgU-lsUACZ5BWoKABSTQ_xgY7Lx3V';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ========== CONFIG LOCAL (precios, comunas, vehículos) ==========
+const CFG_DEFAULT = {
+  pw: '1234',
+  emp: { lat: -38.7850, lng: -72.5980 },
+  tiempo: true, vel: 60, rNoc: 30, rMar: 15,
+  vehs: [
+    { i: '🚗', n: 'Auto / Moto', a: true }, { i: '🚙', n: 'Camioneta', a: true },
+    { i: '🚐', n: 'Furgon', a: true }, { i: '🚌', n: 'Bus', a: true },
+    { i: '🚚', n: 'Camión', a: true }, { i: '🚜', n: 'Tractor', a: true },
+    { i: '📦', n: 'Contenedor', a: true }, { i: '❓', n: 'Otro', a: true }
+  ],
+  coms: [
+    { n: 'Temuco', m: 'fijo', p: [25000,32000,40000,55000,65000,80000,95000,28000], ke: 0, lat: -38.7359, lng: -72.5904 },
+    { n: 'Padre las Casas', m: 'fijo', p: [20000,25000,32000,45000,55000,70000,85000,22000], ke: 0, lat: -38.7711, lng: -72.6089 },
+    { n: 'Vilcun', m: 'fijo', p: [45000,55000,65000,85000,100000,130000,160000,50000], ke: 0, lat: -38.6700, lng: -72.2270 },
+    { n: 'Lautaro', m: 'fijo', p: [50000,60000,70000,90000,110000,140000,170000,55000], ke: 0, lat: -38.5300, lng: -72.4400 },
+    { n: 'Angol', m: 'km', p: [1400,1700,2000,2700,3200,4200,5200,1600], ke: 0, lat: -37.8000, lng: -72.7100 },
+    { n: 'Curacautin', m: 'fijo+km', p: [60000,72000,86000,112000,134000,168000,205000,65000], ke: 800, lat: -38.4300, lng: -71.8900 },
+    { n: 'Otra', m: 'confirmar', p: [0,0,0,0,0,0,0,0], ke: 0, lat: -38.7359, lng: -72.5904 }
+  ],
+  trKm: [1200,1500,1800,2500,3000,4000,5000,1400],
+  irs: [{ n: 'Interregional', p: [2500,3000,3500,4500,5000,6000,7500,2800] }],
+  mots: [
+    { i: '🔋', l: 'Batería' }, { i: '🔧', l: 'Mecánica' }, { i: '💥', l: 'Accidente' },
+    { i: '⛽', l: 'Sin combustible' }, { i: '🔑', l: 'Llaves' }, { i: '🔥', l: 'Calentamiento' },
+    { i: '✏️', l: 'Otro motivo' }
+  ]
+};
+let cfg = null, sessionUser = null;
+let map, mVeh, mDest, drResc, drTraslado, ds;
+let vehLL, destLL, selVeh = 0, selMot = null, comIdx = null;
+let pedido = false, mVehAct = false, mDestAct = false, solRow = null, pollInt = null, prResc = 0;
+let uvTm, trTm, gmReady = false;
+
+// ========== FUNCIONES AUX ==========
+function G(id) { return document.getElementById(id); }
+function lsG(k) { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } }
+function lsS(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+function showModal(id) { G(id).classList.add('show'); }
+function hideModal(id) { G(id).classList.remove('show'); }
+function SP(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); G(id).classList.add('active'); if (id === 'sApp' && map) setTimeout(() => google.maps.event.trigger(map, 'resize'), 100); }
+function badge(t) { let b = G('pmBadge'); b.innerText = '📍 '+t; b.style.display='inline-block'; }
+function H(t) { let h = G('hint'); h.innerText = t; h.classList.toggle('show', !!t); }
+function activarVeh() { mVehAct = true; H('Toca el mapa donde está el vehículo'); }
+function activarDest() { mDestAct = true; H('Toca el mapa para marcar destino'); }
+function rgeo(ll, cb) { new google.maps.Geocoder().geocode({ location: { lat: ll[0], lng: ll[1] } }, (r, s) => cb(s==='OK' && r[0] ? r[0].formatted_address : 'Ubicación')); }
+
+// ========== AUTENTICACIÓN ==========
+async function crearCuenta() {
+  const nombre = G('ncN').value.trim(), email = G('ncE').value.trim(), telefono = G('ncT').value.trim(), rut = G('ncR').value.trim(), pass = G('ncP').value.trim();
+  if (!nombre || !email || !telefono || !rut || !pass) return showError('ncErr', 'Completa todos los campos');
+  hideError('ncErr');
+  try {
+    const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { data: { nombre, telefono, rut } } });
+    if (error) throw error;
+    if (data.user) await supabase.from('profiles').insert([{ id: data.user.id, nombre, telefono, rut }]);
+    alert('Cuenta creada. Ahora inicia sesión.');
+    hideModal('mNueva');
+  } catch (err) { showError('ncErr', err.message); }
+}
+async function login() {
+  const email = G('leE').value.trim(), pass = G('leP').value.trim();
+  if (!email || !pass) return showError('leErr', 'Ingresa correo y contraseña');
+  hideError('leErr');
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    sessionUser = data.user;
+    const { data: profile } = await supabase.from('profiles').select('nombre').eq('id', sessionUser.id).single();
+    sessionUser.user_metadata = { nombre: profile?.nombre || email.split('@')[0] };
+    hideModal('mLogin');
+    iniciarApp();
+  } catch (err) { showError('leErr', err.message); }
+}
+function iniciarApp() {
+  const nom = sessionUser.user_metadata.nombre.split(' ')[0];
+  G('uNom').innerText = nom;
+  G('uIni').innerText = nom.charAt(0).toUpperCase();
+  renderVehs(); renderMots(); llenarSel();
+  SP('sApp');
+  if (gmReady) initGoogleMap(); else window._pendingMapInit = true;
+}
+async function cerrarSesion() { await supabase.auth.signOut(); location.reload(); }
+function accederAdmin() { if (G('mClave').value === cfg.pw) { hideModal('mAdmin'); SP('sAdmin'); } else showError('mErr', 'Clave incorrecta'); }
+function guardarCfg() { lsS('gh_c', cfg); alert('Config guardada'); }
+
+// ========== GOOGLE MAPS ==========
+function initMap() { gmReady = true; if (window._pendingMapInit) initGoogleMap(); }
+function initGoogleMap() {
+  if (map) return;
+  window._pendingMapInit = false;
+  map = new google.maps.Map(G('map'), { center: { lat: cfg.emp.lat, lng: cfg.emp.lng }, zoom: 12, styles: [{ elementType: 'geometry', stylers: [{ color: '#1a1f2e' }] }] });
+  ds = new google.maps.DirectionsService();
+  drResc = new google.maps.DirectionsRenderer({ suppressMarkers: true, polylineOptions: { strokeColor: '#e8a020', strokeWeight: 5 } });
+  drTraslado = new google.maps.DirectionsRenderer({ suppressMarkers: true, polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 5 } });
+  drResc.setMap(map); drTraslado.setMap(map);
+  new google.maps.Marker({ position: { lat: cfg.emp.lat, lng: cfg.emp.lng }, map, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#e8a020', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 } });
+  const svgV = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="12" fill="#22c55e" stroke="white" stroke-width="3"/></svg>';
+  const svgD = '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="40" viewBox="0 0 30 40"><path d="M15 0C6.72 0 0 6.72 0 15c0 11.25 15 25 15 25S30 26.25 30 15C30 6.72 23.28 0 15 0z" fill="#3b82f6"/><circle cx="15" cy="15" r="7" fill="white"/></svg>';
+  window.iV = { url: 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svgV), scaledSize: new google.maps.Size(28,28), anchor: new google.maps.Point(14,14) };
+  window.iD = { url: 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svgD), scaledSize: new google.maps.Size(30,40), anchor: new google.maps.Point(15,40) };
+  if (navigator.geolocation) navigator.geolocation.getCurrentPosition(pos => setVehLL([pos.coords.latitude, pos.coords.longitude], true), null);
+  map.addListener('click', e => {
+    if (pedido) return;
+    const ll = [e.latLng.lat(), e.latLng.lng()];
+    if (mVehAct) { setVehLL(ll, true); mVehAct = false; H(''); }
+    else if (mDestAct) { destLL = ll; if (mDest) mDest.setMap(null); mDest = new google.maps.Marker({ position: { lat: ll[0], lng: ll[1] }, map, icon: window.iD }); rgeo(ll, t => G('trInput').value = t); calcTotal(); mDestAct = false; H(''); }
+  });
+}
+function setVehLL(ll, detect) { vehLL = ll; if (mVeh) mVeh.setMap(null); mVeh = new google.maps.Marker({ position: { lat: ll[0], lng: ll[1] }, map, icon: window.iV }); map.setCenter({ lat: ll[0], lng: ll[1] }); map.setZoom(14); if (detect) detectCom(ll); else { calcResc(); if (destLL) calcTotal(); } }
+function centrarGPS() { navigator.geolocation.getCurrentPosition(pos => setVehLL([pos.coords.latitude, pos.coords.longitude], true)); }
+function detectCom(ll) {
+  new google.maps.Geocoder().geocode({ location: { lat: ll[0], lng: ll[1] } }, (res, s) => {
+    if (s==='OK' && res[0]) {
+      let lugar = res[0].address_components.find(c=>c.types.includes('locality'))?.long_name || '';
+      G('pmUbi').innerText = lugar;
+      let idx = cfg.coms.findIndex(c => c.n.toLowerCase().includes(lugar.toLowerCase()));
+      if (idx>=0) { comIdx = idx; G('comunaSel').value = idx; badge(cfg.coms[idx].n); }
+      else { let best = 0, bestIdx = 0; cfg.coms.forEach((c,i)=>{ let dist = Math.hypot(c.lat-ll[0], c.lng-ll[1]); if (dist<best || i===0) { best=dist; bestIdx=i; } }); comIdx=bestIdx; G('comunaSel').value=bestIdx; badge(cfg.coms[bestIdx].n); G('pmUbi').innerText = cfg.coms[bestIdx].n + ' (cercano)'; }
+    }
+    calcResc(); if (destLL) calcTotal();
+  });
+}
+function onComuna() { let v = G('comunaSel').value; if (v==='') return; comIdx = parseInt(v); let c = cfg.coms[comIdx]; badge(c.n); if (c.lat && c.lng) { vehLL = [c.lat, c.lng]; if (mVeh) mVeh.setMap(null); mVeh = new google.maps.Marker({ position: { lat: c.lat, lng: c.lng }, map, icon: window.iV }); map.setCenter({ lat: c.lat, lng: c.lng }); map.setZoom(13); G('pmUbi').innerText = c.n; } calcResc(); if (destLL) calcTotal(); actualizarPreciosVeh(); }
+function llenarSel() { let s = G('comunaSel'); s.innerHTML = '<option value="">— Selecciona comuna —</option>'; cfg.coms.forEach((c,i) => { let o = document.createElement('option'); o.value = i; o.innerText = c.n; s.appendChild(o); }); }
+
+// ========== BÚSQUEDAS ==========
+function buscarUV(q) { if (!q || q.length<3) { G('uvDrop').style.display='none'; return; } clearTimeout(uvTm); uvTm = setTimeout(() => { new google.maps.places.AutocompleteService().getPlacePredictions({ input: q+' Araucania Chile', types: ['geocode'], componentRestrictions: { country: 'cl' } }, (preds) => { let drop = G('uvDrop'); if (!preds) { drop.style.display='none'; return; } drop.style.display='block'; drop.innerHTML = preds.slice(0,5).map(p => `<div class="drop-item" onclick="selUVP('${p.place_id}')">📍 ${p.description}</div>`).join(''); window._uvPreds=preds; }); }, 400); }
+function selUVP(pid) { G('uvDrop').style.display='none'; let p = window._uvPreds?.find(x=>x.place_id===pid); if(p) G('uvInput').value = p.description.split(',')[0]; new google.maps.places.PlacesService(map).getDetails({ placeId: pid, fields: ['geometry'] }, (pl) => { if(pl?.geometry) setVehLL([pl.geometry.location.lat(), pl.geometry.location.lng()], true); }); }
+function buscarTr(q) { if (!q || q.length<3) { G('trDrop').style.display='none'; return; } clearTimeout(trTm); trTm = setTimeout(() => { new google.maps.places.AutocompleteService().getPlacePredictions({ input: q+' Chile', types: ['geocode'] }, (preds) => { let drop = G('trDrop'); if (!preds) { drop.style.display='none'; return; } drop.style.display='block'; drop.innerHTML = preds.slice(0,5).map(p => `<div class="drop-item" onclick="selTrP('${p.place_id}')">📍 ${p.description}</div>`).join(''); window._trPreds=preds; }); }, 400); }
+function selTrP(pid) { G('trDrop').style.display='none'; let p = window._trPreds?.find(x=>x.place_id===pid); if(p) G('trInput').value = p.description.split(',')[0]; new google.maps.places.PlacesService(map).getDetails({ placeId: pid, fields: ['geometry'] }, (pl) => { if(pl?.geometry) { destLL = [pl.geometry.location.lat(), pl.geometry.location.lng()]; if (mDest) mDest.setMap(null); mDest = new google.maps.Marker({ position: { lat: destLL[0], lng: destLL[1] }, map, icon: window.iD }); calcTotal(); } }); }
+
+// ========== CÁLCULOS ==========
+function getRouteGM(o,d,cb) { let org = Array.isArray(o)?new google.maps.LatLng(o[0],o[1]):{lat:o[0],lng:o[1]}; let dst = Array.isArray(d)?new google.maps.LatLng(d[0],d[1]):{lat:d[0],lng:d[1]}; ds.route({ origin: org, destination: dst, travelMode: google.maps.TravelMode.DRIVING }, (r,s) => cb(s==='OK'?r:null)); }
+function dkFallback(a,b) { let R=6371; let dLat=(b[0]-a[0])*Math.PI/180, dLon=(b[1]-a[1])*Math.PI/180; let x=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2; return R*2*Math.atan2(Math.sqrt(x), Math.sqrt(1-x))*1.05; }
+function calcResc() {
+  if (comIdx===null) { G('pmVal').innerText = 'Selecciona comuna'; G('btnSol').disabled=true; prResc=0; return; }
+  let c = cfg.coms[comIdx], vi = selVeh;
+  let eLL = [cfg.emp.lat, cfg.emp.lng];
+  let tLL = vehLL || [c.lat, c.lng];
+  let esNoc = new Date().getHours()>=22 || new Date().getHours()<7;
+  if (c.m === 'confirmar') { G('pmVal').innerText = 'Por confirmar'; G('btnSol').disabled=false; G('btnSol').innerText = 'Solicitar (precio por confirmar)'; prResc=0; actualizarPreciosVeh(); return; }
+  if (c.m === 'fijo') {
+    let p = c.p[vi]||0; if (esNoc) p = Math.round(p*(1+cfg.rNoc/100)/1000)*1000;
+    let pMax = Math.round(p*(1+cfg.rMar/100)/1000)*1000;
+    prResc = p; G('pmVal').innerText = `$${p.toLocaleString('es-CL')} – $${pMax.toLocaleString('es-CL')}`; G('btnSol').disabled=false; G('btnSol').innerText = `Solicitar grúa desde $${p.toLocaleString('es-CL')}`;
+    getRouteGM(eLL, tLL, r => { if (r && cfg.tiempo) { let leg = r.routes[0].legs[0]; G('pmRight').style.display='block'; G('pmTiempo').innerText = `~${Math.round(leg.duration.value/60)} min`; G('pmKm').innerText = (leg.distance.value/1000).toFixed(1)+' km'; } });
+    actualizarPreciosVeh(); return;
+  }
+  G('pmVal').innerText = 'Calculando...';
+  getRouteGM(eLL, tLL, r => {
+    let km = r ? r.routes[0].legs[0].distance.value/1000 : dkFallback(eLL,tLL);
+    if (r && cfg.tiempo) { let leg = r.routes[0].legs[0]; G('pmRight').style.display='block'; G('pmTiempo').innerText = `~${Math.round(leg.duration.value/60)} min`; G('pmKm').innerText = km.toFixed(1)+' km'; }
+    let p = c.m==='km' ? Math.round((c.p[vi]||1200)*km/1000)*1000 : (c.p[vi]||0) + Math.round((c.ke||800)*km/1000)*1000;
+    if (esNoc) p = Math.round(p*(1+cfg.rNoc/100)/1000)*1000;
+    let pMax = Math.round(p*(1+cfg.rMar/100)/1000)*1000;
+    prResc = p; G('pmVal').innerText = `$${p.toLocaleString('es-CL')} – $${pMax.toLocaleString('es-CL')}`; G('btnSol').disabled=false; G('btnSol').innerText = `Solicitar grúa desde $${p.toLocaleString('es-CL')}`; actualizarPreciosVeh();
+  });
+}
+function calcTotal() {
+  if (!G('togTr').classList.contains('on') || !destLL || !vehLL) return;
+  let vi = selVeh, zona = G('trZona').value;
+  getRouteGM(vehLL, destLL, r => {
+    let km = r ? r.routes[0].legs[0].distance.value/1000 : dkFallback(vehLL,destLL);
+    if (r) { drTraslado.setDirections(r); let b = new google.maps.LatLngBounds(); b.extend({lat:vehLL[0],lng:vehLL[1]}); b.extend({lat:destLL[0],lng:destLL[1]}); map.fitBounds(b); }
+    let kp = zona==='interregional' ? (cfg.irs[0]?.p[vi]||3000) : (cfg.trKm[vi]||1200);
+    let ptr = Math.round(km*kp/1000)*1000;
+    let tot = prResc + ptr, totMax = Math.round(tot*(1+cfg.rMar/100)/1000)*1000;
+    G('trPrecio').innerHTML = `+ Traslado: $${ptr.toLocaleString('es-CL')} (${km.toFixed(1)} km x $${kp.toLocaleString('es-CL')}/km)`;
+    G('pmDesglose').style.display = 'block';
+    G('dRes').innerHTML = `$${prResc.toLocaleString('es-CL')}`;
+    G('dTr').innerHTML = `$${ptr.toLocaleString('es-CL')}`;
+    G('dTot').innerHTML = `$${tot.toLocaleString('es-CL')} – $${totMax.toLocaleString('es-CL')}`;
+    G('btnSol').innerHTML = `Solicitar — total desde $${tot.toLocaleString('es-CL')}`;
+    window._pTr = `$${ptr.toLocaleString('es-CL')}`;
+    window._pTot = `$${tot.toLocaleString('es-CL')} – $${totMax.toLocaleString('es-CL')}`;
+  });
+}
+function toggleTr() { let t = G('togTr'); t.classList.toggle('on'); let dot = t.querySelector('.tog-dot'); if (dot) dot.style.left = t.classList.contains('on')?'15px':'3px'; G('trBody').classList.toggle('show', t.classList.contains('on')); if (!t.classList.contains('on')) { destLL=null; if(mDest) mDest.setMap(null); drTraslado.setDirections({routes:[]}); G('trInput').value=''; G('trPrecio').style.display='none'; G('pmDesglose').style.display='none'; calcResc(); } }
+
+// ========== VEHÍCULOS Y MOTIVOS ==========
+function renderVehs() { let g = G('vGrid'); g.innerHTML=''; cfg.vehs.filter(v=>v.a).forEach((v,i)=>{ let ri=cfg.vehs.indexOf(v); let d=document.createElement('div'); d.className='v-card'+(i===0?' sel':''); d.dataset.vi=ri; d.innerHTML=`<div class="vi">${v.i}</div><div>${v.n}</div><div class="vp"></div>`; d.onclick=()=>{ document.querySelectorAll('.v-card').forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); selVeh=ri; calcResc(); if(destLL) calcTotal(); }; if(i===0) selVeh=ri; g.appendChild(d); }); actualizarPreciosVeh(); }
+function actualizarPreciosVeh() { if(comIdx===null) return; let c=cfg.coms[comIdx]; document.querySelectorAll('.v-card').forEach(card=>{ let vi=parseInt(card.dataset.vi||0); let pEl=card.querySelector('.vp'); if(pEl) pEl.innerText = (c.m!=='confirmar' && c.p[vi]) ? `$${c.p[vi].toLocaleString('es-CL')}` : ''; }); }
+function renderMots() { let g=G('mGrid'); g.innerHTML=''; cfg.mots.forEach(m=>{ let d=document.createElement('div'); d.className='m-card'; d.innerHTML=`<div class="mi">${m.i}</div>${m.l}`; d.onclick=()=>{ document.querySelectorAll('.m-card').forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); if(m.l==='Otro motivo'){ selMot='otro'; G('mOtro').style.display='block'; } else { selMot=m.l; G('mOtro').style.display='none'; } }; g.appendChild(d); }); }
+function skipMotivo() { selMot=null; document.querySelectorAll('.m-card').forEach(x=>x.classList.remove('sel')); G('mOtro').style.display='none'; }
+
+// ========== SOLICITAR GRÚA (GUARDAR EN SUPABASE) ==========
+async function solicitar() {
+  if (pedido) return;
+  pedido = true;
+  let btn = G('btnSol');
+  btn.disabled = true;
+  btn.innerText = 'Enviando...';
+  try {
+    let motivo = selMot === 'otro' ? G('mOtro').value : (selMot || 'No especificado');
+    let comunaNombre = comIdx !== null ? cfg.coms[comIdx].n : 'No especificada';
+    let destinoTexto = G('trInput').value || 'No solicitado';
+    let precioRescateStr = G('pmVal').innerText;
+    let precioTrasladoStr = window._pTr || 'No solicitado';
+    let precioTotalStr = window._pTot || precioRescateStr;
+    let ubicacionStr = vehLL ? `${vehLL[0].toFixed(5)}, ${vehLL[1].toFixed(5)}` : '';
+    let vehiculoStr = cfg.vehs[selVeh]?.n || '';
+    let fechaStr = new Date().toLocaleString('es-CL');
+    
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .insert([{
+        user_id: sessionUser.id,
+        fecha: fechaStr,
+        ubicacion: ubicacionStr,
+        comuna: comunaNombre,
+        destino: destinoTexto,
+        vehiculo: vehiculoStr,
+        motivo: motivo,
+        precio_rescate: precioRescateStr,
+        precio_traslado: precioTrasladoStr,
+        precio_total: precioTotalStr,
+        estado: 'Esperando confirmacion'
+      }])
+      .select('id');
+      
+    if (error) throw error;
+    solRow = data[0].id;
+    btn.className = 'btn-sol btn-ok';
+    btn.innerText = 'Solicitud enviada';
+    G('statusWrap').classList.add('show');
+    G('panel').style.display = 'none';
+    if (pollInt) clearInterval(pollInt);
+    pollInt = setInterval(pollEstado, 15000);
+    pollEstado();
+  } catch (err) {
+    console.error('Error al guardar:', err);
+    alert('Error: ' + err.message);
+    btn.disabled = false;
+    btn.innerText = 'Reintentar';
+    pedido = false;
+  }
+}
+async function pollEstado() {
+  if (!solRow) return;
+  try {
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .select('estado, conductor, patente, hora_estimada, precio_final, observaciones')
+      .eq('id', solRow)
+      .single();
+    if (error) throw error;
+    if (data) {
+      G('scEstado').innerText = data.estado;
+      if (data.conductor || data.patente || data.hora_estimada || data.precio_final) {
+        G('scInfo').style.display = 'flex';
+        G('scCond').innerText = data.conductor || '—';
+        G('scPat').innerText = data.patente || '—';
+        G('scHora').innerText = data.hora_estimada || '—';
+        G('scPF').innerText = data.precio_final || '—';
+      }
+      if (data.observaciones) { G('scObs').style.display = 'block'; G('scObs').innerText = 'Nota: '+data.observaciones; }
+      let paso = 0;
+      if (data.estado.toLowerCase().includes('contacto')) paso = 1;
+      else if (data.estado.toLowerCase().includes('camino')) paso = 2;
+      else if (data.estado.toLowerCase().includes('completado')) paso = 3;
+      ['ss0','ss1','ss2','ss3'].forEach((id,i) => { let s = G(id); s.className = 'sc-step'; if (i < paso) s.classList.add('done'); else if (i === paso) s.classList.add('active'); });
+      if (data.estado === 'Completado' || data.estado === 'Cancelado') clearInterval(pollInt);
+    }
+  } catch(e) { console.warn(e); }
+}
+
+function showError(id, msg) { let e = G(id); e.innerText = msg; e.style.display = 'block'; }
+function hideError(id) { let e = G(id); if (e) e.style.display = 'none'; }
+
+// ========== INICIALIZACIÓN ==========
+window.onload = async () => {
+  let saved = lsG('gh_c');
+  cfg = saved ? Object.assign(JSON.parse(JSON.stringify(CFG_DEFAULT)), saved) : JSON.parse(JSON.stringify(CFG_DEFAULT));
+  if (!cfg.trKm) cfg.trKm = CFG_DEFAULT.trKm;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    sessionUser = session.user;
+    const { data: profile } = await supabase.from('profiles').select('nombre').eq('id', sessionUser.id).single();
+    sessionUser.user_metadata = { nombre: profile?.nombre || sessionUser.email.split('@')[0] };
+    iniciarApp();
+  } else {
+    SP('sLogin');
+  }
+};
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDrojGFZpAVk-seCJwS_SnHHPUdjU69yW4&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>
